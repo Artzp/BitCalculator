@@ -1,0 +1,132 @@
+{
+  "1000": {
+    "building_type": 20,
+    "building_tier": 1,
+    "building_name": "Cooking Station"
+  },
+  "1004": {
+    "building_type": 25,
+    "building_tier": 4,
+    "building_name": "Fine Scholar Station"
+  },
+  "1005": {
+    "building_type": 22,
+    "building_tier": 6,
+    "building_name": "Peerless Carpentry Station"
+  },
+  "101000": {
+    "building_type": 21,
+    "building_tier": 1,
+    "building_name": "Smithing Station"
+  },
+  "101002": {
+    "building_type": 21,
+    "building_tier": 1,
+    "building_name": "Smithing Station"
+  },
+  "102000": {
+    "building_type": 20,
+    "building_tier": 1,
+    "building_name": "Cooking Station"
+  },
+  "102002": {
+    "building_type": 20,
+    "building_tier": 1,
+    "building_name": "Cooking Station"
+  },
+  "102003": {
+    "building_type": 20,
+    "building_tier": 1,
+    "building_name": "Cooking Station"
+  },
+  "102009": {
+    "building_type": 20,
+    "building_tier": 1,
+    "building_name": "Cooking Station"
+  },
+  "103001": {
+    "building_type": 21,
+    "building_tier": 1,
+    "building_name": "Smithing Station"
+  },
+  "103002": {
+    "building_type": 22,
+    "building_tier": 1,
+    "building_name": "Carpentry Station"
+  },
+  "103003": {
+    "building_type": 23,
+    "building_tier": 1,
+    "building_name": "Farming Station"
+  },
+  "103006": {
+    "building_type": 25,
+    "building_tier": 1,
+    "building_name": "Scholar Station"
+  },
+  "103007": {
+    "building_type": 23,
+    "building_tier": 1,
+    "building_name": "Farming Station"
+  },
+  "103008": {
+    "building_type": 22,
+    "building_tier": 1,
+    "building_name": "Carpentry Station"
+  },
+  "103009": {
+    "building_type": 22,
+    "building_tier": 1,
+    "building_name": "Carpentry Station"
+  },
+  "103010": {
+    "building_type": 22,
+    "building_tier": 1,
+    "building_name": "Carpentry Station"
+  },
+  "103011": {
+    "building_type": 22,
+    "building_tier": 1,
+    "building_name": "Carpentry Station"
+  },
+  "103017": {
+    "building_type": 22,
+    "building_tier": 3,
+    "building_name": "Sturdy Carpentry Station"
+  },
+  "103018": {
+    "building_type": 22,
+    "building_tier": 5,
+    "building_name": "Exquisite Carpentry Station"
+  },
+  "103019": {
+    "building_type": 23,
+    "building_tier": 3,
+    "building_name": "Sturdy Farming Station"
+  },
+  "103020": {
+    "building_type": 23,
+    "building_tier": 5,
+    "building_name": "Exquisite Farming Station"
+  },
+  "103021": {
+    "building_type": 22,
+    "building_tier": 1,
+    "building_name": "Carpentry Station"
+  },
+  "103022": {
+    "building_type": 22,
+    "building_tier": 1,
+    "building_name": "Carpentry Station"
+  },
+  "103023": {
+    "building_type": 22,
+    "building_tier": 1,
+    "building_name": "Carpentry Station"
+  },
+  "103024": {
+    "building_type": 22,
+    "building_tier": 1,
+    "building_name": "Carpentry Station"
+  }
+}

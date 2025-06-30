@@ -9,9 +9,68 @@ items = json.load(open(f'{root}/item_desc.json'))
 item_lists = json.load(open(f'{root}/item_list_desc.json'))
 cargos = json.load(open(f'{root}/cargo_desc.json'))
 enemies = json.load(open(f'{root}/enemy_desc.json'))
+skills = json.load(open(f'{root}/skill_desc.json'))
 
 cargo_offset = 0xffffffff
 crafting_data = {}
+
+# Building type mapping
+building_type_to_name = {
+	20: "Cooking Station",
+	21: "Smithing Station", 
+	22: "Carpentry Station",
+	23: "Farming Station",
+	24: "Fishing Station",
+	25: "Scholar Station",
+	26: "Hunting Station",
+	27: "Mining Station"
+}
+
+# Skill mapping
+skill_id_to_name = {}
+for skill in skills:
+	skill_id_to_name[skill['id']] = skill['name']
+
+def get_building_name(building_type, tier):
+	if building_type not in building_type_to_name:
+		return None
+	
+	tier_names = ["", "Rough", "Simple", "Sturdy", "Fine", "Exquisite", "Peerless", "Legendary", "Masterwork", "Magnificent"]
+	tier_name = tier_names[tier] if tier < len(tier_names) else f"Tier {tier}"
+	
+	base_name = building_type_to_name[building_type]
+	return f"{tier_name} {base_name}" if tier > 1 else base_name
+
+def get_recipe_building_requirement(recipe_id):
+	for recipe in crafting_recipes:
+		if recipe.get('id') == recipe_id:
+			building_reqs = recipe.get('building_requirement', [])
+			if building_reqs and len(building_reqs) >= 2:
+				building_info = building_reqs[1] if isinstance(building_reqs[1], dict) else {}
+				building_type = building_info.get('building_type', None)
+				tier = building_info.get('tier', 1)
+				
+				if building_type:
+					return get_building_name(building_type, tier)
+	return None
+
+def get_skill_requirement(level_requirements):
+	"""Parse skill requirements to get skill name and level"""
+	if not level_requirements or len(level_requirements) == 0:
+		return None
+	
+	# level_requirements is an array of [skill_id, level] pairs
+	skill_req = level_requirements[0]  # Take the first requirement
+	if len(skill_req) >= 2:
+		skill_id = skill_req[0]
+		level = skill_req[1]
+		skill_name = skill_id_to_name.get(skill_id, f"Skill {skill_id}")
+		return {
+			'skill_name': skill_name,
+			'skill_level': level,
+			'skill_id': skill_id
+		}
+	return None
 
 def find_recipes(id, is_cargo = False):
 	recipes = []
@@ -35,11 +94,19 @@ def find_recipes(id, is_cargo = False):
 				if consumes_itself:
 					continue
 
+				# Get building requirement for this recipe
+				building_requirement = get_recipe_building_requirement(recipe.get('id'))
+				
+				# Get skill requirement for this recipe
+				skill_requirement = get_skill_requirement(recipe.get('level_requirements', []))
+
 				recipe_data = {
-					'level_requirements': recipe['level_requirements'][0], 
+					'level_requirements': recipe['level_requirements'][0] if recipe.get('level_requirements') else [0, 0], 
 					'consumed_items': consumed_items,
 					'output_quantity': result[1],
-					'possibilities': {}
+					'possibilities': {},
+					'building_requirement': building_requirement,
+					'skill_requirement': skill_requirement
 				}
 				recipes.append(recipe_data)
 	return recipes
@@ -168,7 +235,7 @@ for item in crafting_data.values():
 	recipes = item['recipes']
 	deduplicated_recipes = {json.dumps(r, sort_keys=True) for r in recipes}
 	recipes = [json.loads(r) for r in deduplicated_recipes]
-	recipes.sort(key=lambda recipe: recipe['consumed_items'][0]['quantity'])
+	recipes.sort(key=lambda recipe: recipe['consumed_items'][0]['quantity'] if len(recipe['consumed_items']) > 0 else 0)
 	item['recipes'] = recipes
 
 json.dump(crafting_data, open('../BitPlanner/crafting_data.json', 'w'), indent=2)
