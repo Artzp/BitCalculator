@@ -171,9 +171,9 @@ const RecipeTree: React.FC<RecipeTreeProps> = ({
   const style = getItemStyle(depth);
   const operationType = getOperationType(recipe);
 
-  // Generate skill summary only for root level (depth === 0)
-  const skillSummary = depth === 0 ? collectSkillRequirements(itemId, recipeIndex) : {};
-  const hasSkillRequirements = depth === 0 && Object.keys(skillSummary).length > 0;
+  // Generate skill summary only for Recipe 1 level (depth === 1)
+  const skillSummary = depth === 1 ? collectSkillRequirements(itemId, recipeIndex) : {};
+  const hasSkillRequirements = depth === 1 && Object.keys(skillSummary).length > 0;
 
   return (
     <div>
