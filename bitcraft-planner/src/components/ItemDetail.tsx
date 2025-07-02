@@ -2,6 +2,7 @@ import React from 'react';
 import { useItemsStore } from '../state/useItemsStore';
 import { RARITY_COLORS, RARITY_NAMES } from '../utils/constants';
 import RecipeTree from './RecipeTree';
+import ShoppingList from './ShoppingList';
 
 const ItemDetail: React.FC = () => {
   const { getSelectedItem, selectedItemId } = useItemsStore();
@@ -79,8 +80,11 @@ const ItemDetail: React.FC = () => {
                     )}
                   </div>
                 </div>
-                <div className="bg-white rounded-lg p-4 border border-slate-200">
-                  <RecipeTree itemId={selectedItemId} quantity={1} recipeIndex={index} />
+                <div className="space-y-6">
+                  <div className="bg-white rounded-lg p-4 border border-slate-200">
+                    <RecipeTree itemId={selectedItemId} quantity={1} recipeIndex={index} />
+                  </div>
+                  <ShoppingList itemId={selectedItemId} quantity={1} recipeIndex={index} />
                 </div>
               </div>
             ))}

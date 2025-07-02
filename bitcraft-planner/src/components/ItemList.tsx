@@ -1,8 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useItemsStore } from '../state/useItemsStore';
 import { RARITY_COLORS, RARITY_NAMES } from '../utils/constants';
 
-const ItemList: React.FC = () => {
+interface ItemListProps {
+  showAddToBuilds?: boolean;
+}
+
+const ItemList: React.FC<ItemListProps> = ({ showAddToBuilds = false }) => {
   const {
     searchTerm,
     tierFilter,
@@ -14,12 +18,31 @@ const ItemList: React.FC = () => {
     setRecipeTypeFilter,
     setSelectedItemId,
     getFilteredItems,
+    addToBuildList,
+    items,
   } = useItemsStore();
+
+  const [addQuantities, setAddQuantities] = useState<Record<string, number>>({});
 
   const filteredItems = getFilteredItems();
 
   const handleItemClick = (id: string) => {
     setSelectedItemId(id);
+  };
+
+  const handleAddToBuild = (itemId: string) => {
+    const quantity = addQuantities[itemId] || 1;
+    const item = items[itemId];
+    
+    if (item && item.recipes && item.recipes.length > 0) {
+      addToBuildList(itemId, quantity, 0); // Default to first recipe
+      // Reset quantity after adding
+      setAddQuantities(prev => ({ ...prev, [itemId]: 1 }));
+    }
+  };
+
+  const updateQuantity = (itemId: string, quantity: number) => {
+    setAddQuantities(prev => ({ ...prev, [itemId]: Math.max(1, quantity) }));
   };
 
   const uniqueTiers = Array.from(new Set(
@@ -90,32 +113,75 @@ const ItemList: React.FC = () => {
       <div className="flex-1 min-h-0">
         <div className="h-full overflow-y-auto space-y-3 pr-2">
           {filteredItems.length > 0 ? (
-            filteredItems.map(([id, item]) => (
-              <div
-                key={id}
-                onClick={() => handleItemClick(id)}
-                className="p-4 bg-slate-50 rounded-lg cursor-pointer hover:bg-slate-100 transition-all duration-200 border-2 border-slate-200 hover:border-blue-400 shadow-sm hover:shadow-md"
-              >
-                <div className="flex justify-between items-start">
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-slate-800 text-lg mb-2 truncate">{item.name}</h3>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs font-medium text-slate-600 bg-slate-200 px-2 py-1 rounded-full">
-                        Tier {item.tier >= 0 ? item.tier : 'Base'}
-                      </span>
-                      <span className={`text-xs font-semibold px-2 py-1 rounded-full ${RARITY_COLORS[item.rarity as keyof typeof RARITY_COLORS]} bg-slate-200`}>
-                        {RARITY_NAMES[item.rarity as keyof typeof RARITY_NAMES]}
-                      </span>
+            filteredItems.map(([id, item]) => {
+              const canCraft = item.recipes && item.recipes.length > 0;
+              const quantity = addQuantities[id] || 1;
+              
+              return (
+                <div
+                  key={id}
+                  className="p-4 bg-slate-50 rounded-lg transition-all duration-200 border-2 border-slate-200 hover:border-blue-400 shadow-sm hover:shadow-md"
+                >
+                  <div className="flex justify-between items-start">
+                    <div 
+                      className={`flex-1 min-w-0 ${!showAddToBuilds ? 'cursor-pointer' : ''}`}
+                      onClick={!showAddToBuilds ? () => handleItemClick(id) : undefined}
+                    >
+                      <h3 className="font-bold text-slate-800 text-lg mb-2 truncate">{item.name}</h3>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-medium text-slate-600 bg-slate-200 px-2 py-1 rounded-full">
+                          Tier {item.tier >= 0 ? item.tier : 'Base'}
+                        </span>
+                        <span className={`text-xs font-semibold px-2 py-1 rounded-full ${RARITY_COLORS[item.rarity as keyof typeof RARITY_COLORS]} bg-slate-200`}>
+                          {RARITY_NAMES[item.rarity as keyof typeof RARITY_NAMES]}
+                        </span>
+                        {!canCraft && (
+                          <span className="text-xs font-medium text-orange-600 bg-orange-100 px-2 py-1 rounded-full">
+                            Base Item
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex-shrink-0 ml-2">
-                    <div className="text-xs font-medium text-slate-600 bg-slate-200 px-2 py-1 rounded">
-                      {item.recipes.length > 0 ? `${item.recipes.length}R` : 'Base'}
+                    <div className="flex-shrink-0 ml-2">
+                      {showAddToBuilds ? (
+                        <div className="flex items-center gap-2">
+                          {canCraft && (
+                            <>
+                              <input
+                                type="number"
+                                min="1"
+                                value={quantity}
+                                onChange={(e) => updateQuantity(id, parseInt(e.target.value) || 1)}
+                                className="w-16 px-2 py-1 text-sm bg-white border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleAddToBuild(id);
+                                }}
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm font-medium transition-colors"
+                              >
+                                + Add
+                              </button>
+                            </>
+                          )}
+                          {!canCraft && (
+                            <div className="text-xs font-medium text-slate-500 bg-slate-200 px-2 py-1 rounded">
+                              Not Craftable
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="text-xs font-medium text-slate-600 bg-slate-200 px-2 py-1 rounded">
+                          {item.recipes.length > 0 ? `${item.recipes.length}R` : 'Base'}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           ) : (
             <div className="flex items-center justify-center h-32">
               <div className="bg-slate-100 rounded-xl p-6 border-2 border-slate-200">
