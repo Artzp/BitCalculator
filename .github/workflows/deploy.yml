@@ -30,10 +30,14 @@ jobs:
         cache: 'npm'
         cache-dependency-path: './bitcraft-planner/package-lock.json'
         
+    - name: Clear npm cache
+      run: npm cache clean --force
+        
     - name: Install dependencies
       run: |
         cd bitcraft-planner
-        npm ci --legacy-peer-deps
+        npm cache clean --force
+        npm ci --legacy-peer-deps --no-audit --no-fund
         
     - name: Build
       run: |
