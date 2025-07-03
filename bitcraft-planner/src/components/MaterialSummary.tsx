@@ -6,8 +6,7 @@ const MaterialSummary: React.FC = () => {
   const { 
     getRequiredMaterials, 
     buildList, 
-    setInventoryItem, 
-    getInventoryQuantity 
+    setInventoryItem
   } = useItemsStore();
 
   const materials = getRequiredMaterials();

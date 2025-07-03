@@ -18,9 +18,10 @@ const InventoryInput: React.FC = () => {
   const [showOnlyRequired, setShowOnlyRequired] = useState(true);
 
   const allPossibleMaterials = getAllPossibleMaterials();
-  const baseMaterials = getRequiredMaterials();
-  const requiredMaterials = showOnlyRequired ? allPossibleMaterials : [];
-  const requiredItemIds = new Set(allPossibleMaterials.map(m => m.itemId));
+  
+  const requiredItemIds = useMemo(() => {
+    return new Set(allPossibleMaterials.map(m => m.itemId));
+  }, [allPossibleMaterials]);
 
   const filteredItems = useMemo(() => {
     let itemList = Object.entries(items);

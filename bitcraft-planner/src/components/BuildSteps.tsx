@@ -174,7 +174,6 @@ const BuildSteps: React.FC = () => {
 
     // Otherwise check if we can craft it by having all ingredients
     return step.ingredients.every(ingredient => {
-      const currentHave = inventory[ingredient.id] || 0;
       const effectiveHave = getEffectiveInventoryQuantity(ingredient.id);
       
       // Check if we have enough directly in inventory
