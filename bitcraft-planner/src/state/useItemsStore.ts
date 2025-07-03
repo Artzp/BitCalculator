@@ -27,7 +27,6 @@ export interface MaterialRequirement {
 
 interface ItemsStore {
   items: ItemsData;
-  selectedItemId: string | null;
   searchTerm: string;
   tierFilter: number | null;
   rarityFilter: number | null;
@@ -39,7 +38,6 @@ interface ItemsStore {
   buildList: BuildListItem[];
   
   setItems: (items: ItemsData) => void;
-  setSelectedItemId: (id: string | null) => void;
   setSearchTerm: (term: string) => void;
   setTierFilter: (tier: number | null) => void;
   setRarityFilter: (rarity: number | null) => void;
@@ -57,7 +55,6 @@ interface ItemsStore {
   updateBuildListItem: (itemId: string, quantity: number, recipeIndex?: number) => void;
   clearBuildList: () => void;
   
-  getSelectedItem: () => Item | null;
   getFilteredItems: () => [string, Item][];
   getInventoryQuantity: (itemId: string) => number;
   getEffectiveInventoryQuantity: (itemId: string) => number;
@@ -67,7 +64,6 @@ interface ItemsStore {
 
 export const useItemsStore = create<ItemsStore>((set, get) => ({
   items: {},
-  selectedItemId: null,
   searchTerm: '',
   tierFilter: null,
   rarityFilter: null,
@@ -79,7 +75,6 @@ export const useItemsStore = create<ItemsStore>((set, get) => ({
   buildList: [],
   
   setItems: (items) => set({ items }),
-  setSelectedItemId: (id) => set({ selectedItemId: id }),
   setSearchTerm: (term) => set({ searchTerm: term }),
   setTierFilter: (tier) => set({ tierFilter: tier }),
   setRarityFilter: (rarity) => set({ rarityFilter: rarity }),
@@ -133,11 +128,6 @@ export const useItemsStore = create<ItemsStore>((set, get) => ({
   }),
   
   clearBuildList: () => set({ buildList: [] }),
-  
-  getSelectedItem: () => {
-    const { items, selectedItemId } = get();
-    return selectedItemId ? items[selectedItemId] || null : null;
-  },
   
   getFilteredItems: () => {
     const { items, searchTerm, tierFilter, rarityFilter, recipeTypeFilter } = get();

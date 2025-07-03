@@ -1,10 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useItemsStore } from './state/useItemsStore';
 import { ItemsData } from './types/Item';
-import ItemList from './components/ItemList';
-import ItemDetail from './components/ItemDetail';
-import Calculator from './components/Calculator';
-import InventoryManager from './components/InventoryManager';
 import BitCalculatorPage from './components/BitCalculatorPage';
 import './App.css';
 
@@ -12,11 +8,8 @@ function App() {
   const { 
     setItems, 
     setIsLoading, 
-    isLoading, 
-    selectedItemId 
+    isLoading
   } = useItemsStore();
-  
-  const [activeTab, setActiveTab] = useState<'recipes' | 'calculator' | 'inventory' | 'bitcalculator'>('recipes');
 
   useEffect(() => {
     async function loadItems() {
@@ -50,98 +43,10 @@ function App() {
           BitCraft Calculator
         </h1>
         
-        {/* Tab Navigation */}
-        <div className="flex justify-center mb-8">
-          <div className="bg-white rounded-xl p-2 flex shadow-lg border border-slate-200">
-            <button
-              onClick={() => setActiveTab('recipes')}
-              className={`px-6 py-3 rounded-lg font-semibold text-lg transition-all duration-200 ${
-                activeTab === 'recipes'
-                  ? 'bg-blue-600 text-white shadow-md'
-                  : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100'
-              }`}
-            >
-              Recipe Browser
-            </button>
-            <button
-              onClick={() => setActiveTab('calculator')}
-              className={`px-6 py-3 rounded-lg font-semibold text-lg transition-all duration-200 ${
-                activeTab === 'calculator'
-                  ? 'bg-blue-600 text-white shadow-md'
-                  : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100'
-              }`}
-            >
-              Material Calculator
-            </button>
-            <button
-              onClick={() => setActiveTab('bitcalculator')}
-              className={`px-6 py-3 rounded-lg font-semibold text-lg transition-all duration-200 ${
-                activeTab === 'bitcalculator'
-                  ? 'bg-blue-600 text-white shadow-md'
-                  : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100'
-              }`}
-            >
-              🧮 Bit Calculator
-            </button>
-            <button
-              onClick={() => setActiveTab('inventory')}
-              className={`px-6 py-3 rounded-lg font-semibold text-lg transition-all duration-200 ${
-                activeTab === 'inventory'
-                  ? 'bg-blue-600 text-white shadow-md'
-                  : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100'
-              }`}
-            >
-              📦 Inventory
-            </button>
-          </div>
+        {/* Main Application - Bit Calculator */}
+        <div className="h-[calc(100vh-200px)]">
+          <BitCalculatorPage />
         </div>
-
-        {/* Conditional layout based on active tab */}
-        {activeTab === 'bitcalculator' ? (
-          /* Full width layout for Bit Calculator */
-          <div className="h-[calc(100vh-200px)]">
-            <BitCalculatorPage />
-          </div>
-        ) : (
-          /* Two-column layout for other tabs */
-          <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-200px)]">
-            {/* Items Panel - Fixed width on large screens */}
-            <div className="lg:w-96 xl:w-[28rem] 2xl:w-[32rem] flex-shrink-0">
-              <div className="bg-white rounded-xl p-6 shadow-lg border border-slate-200 h-full">
-                <h2 className="text-3xl font-bold mb-6 text-slate-800 border-b border-slate-200 pb-4">Items</h2>
-                <ItemList />
-              </div>
-            </div>
-            
-            {/* Main Content Panel - Takes remaining space */}
-            <div className="flex-1 min-w-0">
-              <div className="bg-white rounded-xl p-6 shadow-lg border border-slate-200 h-full overflow-auto">
-                <h2 className="text-3xl font-bold mb-6 text-slate-800 border-b border-slate-200 pb-4">
-                  {activeTab === 'recipes' && 'Recipe Details'}
-                  {activeTab === 'calculator' && 'Material Calculator'}
-                  {activeTab === 'inventory' && 'Inventory Manager'}
-                </h2>
-                {activeTab === 'inventory' ? (
-                  <div className="h-full overflow-auto">
-                    <InventoryManager />
-                  </div>
-                ) : selectedItemId ? (
-                  <div className="h-full overflow-auto">
-                    {activeTab === 'recipes' ? <ItemDetail /> : <Calculator />}
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center h-64">
-                    <div className="bg-slate-100 rounded-xl p-8 border border-slate-200">
-                      <div className="text-xl text-slate-600">
-                        Select an item to {activeTab === 'recipes' ? 'view its recipe details' : 'use the calculator'}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

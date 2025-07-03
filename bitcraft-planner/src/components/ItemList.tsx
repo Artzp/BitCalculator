@@ -16,7 +16,6 @@ const ItemList: React.FC<ItemListProps> = ({ showAddToBuilds = false }) => {
     setTierFilter,
     setRarityFilter,
     setRecipeTypeFilter,
-    setSelectedItemId,
     getFilteredItems,
     addToBuildList,
     items,
@@ -25,10 +24,6 @@ const ItemList: React.FC<ItemListProps> = ({ showAddToBuilds = false }) => {
   const [addQuantities, setAddQuantities] = useState<Record<string, number>>({});
 
   const filteredItems = getFilteredItems();
-
-  const handleItemClick = (id: string) => {
-    setSelectedItemId(id);
-  };
 
   const handleAddToBuild = (itemId: string) => {
     const quantity = addQuantities[itemId] || 1;
@@ -125,7 +120,6 @@ const ItemList: React.FC<ItemListProps> = ({ showAddToBuilds = false }) => {
                   <div className="flex justify-between items-start">
                     <div 
                       className={`flex-1 min-w-0 ${!showAddToBuilds ? 'cursor-pointer' : ''}`}
-                      onClick={!showAddToBuilds ? () => handleItemClick(id) : undefined}
                     >
                       <h3 className="font-bold text-slate-800 text-lg mb-2 truncate">{item.name}</h3>
                       <div className="flex items-center gap-2 flex-wrap">
