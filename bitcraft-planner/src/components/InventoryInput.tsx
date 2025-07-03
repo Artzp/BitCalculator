@@ -9,7 +9,6 @@ const InventoryInput: React.FC = () => {
     setInventoryItem, 
     removeInventoryItem, 
     clearInventory,
-    getRequiredMaterials,
     getAllPossibleMaterials,
     getEffectiveInventoryQuantity 
   } = useItemsStore();
