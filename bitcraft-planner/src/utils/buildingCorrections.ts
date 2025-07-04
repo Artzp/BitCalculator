@@ -34,9 +34,43 @@ const BUILDING_PATTERNS: Record<string, string> = {
   'Bait': 'Fishing Station',
   'Fish': 'Fishing Station',
   'Chum': 'Fishing Station',
+  
+  // Leatherworking-related items
+  'Pelt': 'Leatherworking Station',
+  'Leather': 'Leatherworking Station',
+  'Tanned': 'Leatherworking Station',
+  'Cleaned': 'Leatherworking Station',
 };
 
-export function correctBuildingRequirement(itemName: string, originalBuilding: string | null): string | null {
+// Skill-based building defaults
+const SKILL_TO_BUILDING: Record<string, string> = {
+  'Leatherworking': 'Leatherworking Station',
+  'Smithing': 'Smithing Station',
+  'Cooking': 'Cooking Station',
+  'Farming': 'Farming Station',
+  'Fishing': 'Fishing Station',
+  'Weaving': 'Weaving Station',
+  'Alchemy': 'Alchemy Station',
+  'Masonry': 'Masonry Station',
+  'Woodworking': 'Woodworking Station',
+  'Scholar': 'Scholar Station',
+  'Forestry': 'Smithing Station', // Items like Ash, Charcoal are processed at smithing stations
+};
+
+// Function to get tier-appropriate building name
+function getTieredBuildingName(baseBuildingName: string, tier: number): string {
+  if (tier <= 0) return baseBuildingName;
+  
+  // Use "Tier X" format to match the game's display
+  return `Tier ${tier} ${baseBuildingName}`;
+}
+
+export function correctBuildingRequirement(
+  itemName: string, 
+  originalBuilding: string | null, 
+  skillName?: string,
+  tier?: number
+): string | null {
   // First check for exact name corrections
   if (BUILDING_CORRECTIONS[itemName]) {
     return BUILDING_CORRECTIONS[itemName];
@@ -44,9 +78,16 @@ export function correctBuildingRequirement(itemName: string, originalBuilding: s
   
   // If no original building, try pattern matching
   if (!originalBuilding) {
+    // Check skill-based defaults first
+    if (skillName && SKILL_TO_BUILDING[skillName]) {
+      const baseBuilding = SKILL_TO_BUILDING[skillName];
+      return getTieredBuildingName(baseBuilding, tier || 1);
+    }
+    
+    // Then check item name patterns
     for (const [pattern, building] of Object.entries(BUILDING_PATTERNS)) {
       if (itemName.includes(pattern)) {
-        return building;
+        return getTieredBuildingName(building, tier || 1);
       }
     }
   }
@@ -62,12 +103,17 @@ export function correctBuildingRequirement(itemName: string, originalBuilding: s
   return originalBuilding;
 }
 
-export function getBuildingCorrectionInfo(itemName: string, originalBuilding: string | null): {
+export function getBuildingCorrectionInfo(
+  itemName: string, 
+  originalBuilding: string | null,
+  skillName?: string,
+  tier?: number
+): {
   correctedBuilding: string | null;
   wasCorrected: boolean;
   originalBuilding: string | null;
 } {
-  const corrected = correctBuildingRequirement(itemName, originalBuilding);
+  const corrected = correctBuildingRequirement(itemName, originalBuilding, skillName, tier);
   return {
     correctedBuilding: corrected,
     wasCorrected: corrected !== originalBuilding,

@@ -156,8 +156,18 @@ const BuildSteps: React.FC = () => {
         outputQuantity: recipe.output_quantity,
         skillRequirement: recipe.skill_requirement ? 
           `${recipe.skill_requirement.skill_name} ${recipe.skill_requirement.skill_level}` : null,
-        buildingRequirement: correctBuildingRequirement(item.name, recipe.building_requirement),
-        buildingCorrectionInfo: getBuildingCorrectionInfo(item.name, recipe.building_requirement)
+        buildingRequirement: correctBuildingRequirement(
+          item.name, 
+          recipe.building_requirement,
+          recipe.skill_requirement?.skill_name,
+          item.tier
+        ),
+        buildingCorrectionInfo: getBuildingCorrectionInfo(
+          item.name, 
+          recipe.building_requirement,
+          recipe.skill_requirement?.skill_name,
+          item.tier
+        )
       });
     });
 
