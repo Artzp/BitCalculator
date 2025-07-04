@@ -2,6 +2,7 @@ import React from 'react';
 import { useItemsStore } from '../state/useItemsStore';
 import { RARITY_COLORS, RARITY_NAMES } from '../utils/constants';
 import { correctBuildingRequirement, getBuildingCorrectionInfo } from '../utils/buildingCorrections';
+import BuildingRequirement from './BuildingRequirement';
 
 interface CraftingStep {
   stepNumber: number;
@@ -286,9 +287,10 @@ const BuildSteps: React.FC = () => {
                           {(RARITY_NAMES[step.rarity as keyof typeof RARITY_NAMES] || 'Unknown').charAt(0)}
                         </span>
                         {step.buildingRequirement && (
-                          <span className="text-xs font-medium text-purple-700 bg-purple-100 px-1.5 py-0.5 rounded">
-                            🏗️ {step.buildingRequirement}
-                          </span>
+                          <BuildingRequirement
+                            buildingName={step.buildingRequirement}
+                            compact={true}
+                          />
                         )}
                         {step.skillRequirement && (
                           <span className="text-xs font-medium text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded">
@@ -331,8 +333,12 @@ const BuildSteps: React.FC = () => {
                   <div className="space-y-1">
                     {step.buildingRequirement && (
                       <div className="space-y-1">
-                        <div className="text-xs text-purple-700 bg-purple-100 px-2 py-1 rounded font-medium border border-purple-200">
-                          🏗️ Building Required: {step.buildingRequirement}
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-medium text-gray-600">Building Required:</span>
+                          <BuildingRequirement
+                            buildingName={step.buildingRequirement}
+                            showDetails={false}
+                          />
                         </div>
                         {step.buildingCorrectionInfo?.wasCorrected && (
                           <div className="text-xs text-orange-700 bg-orange-100 px-2 py-1 rounded font-medium border border-orange-200">

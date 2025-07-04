@@ -14,4 +14,13 @@ export const RARITY_NAMES = {
   3: 'Rare',
   4: 'Epic',
   5: 'Legendary',
-} as const; 
+} as const;
+
+// Re-export building types for convenience
+export {
+  BUILDING_CATEGORIES,
+  BUILDING_TYPES,
+  BUILDING_TIERS,
+  BUILDING_TYPE_COLORS,
+  BUILDING_TYPE_ICONS
+} from './buildingTypes'; 
