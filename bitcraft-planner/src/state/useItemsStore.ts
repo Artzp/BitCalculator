@@ -67,7 +67,7 @@ export const useItemsStore = create<ItemsStore>((set, get) => ({
   searchTerm: '',
   tierFilter: null,
   rarityFilter: null,
-  recipeTypeFilter: null,
+  recipeTypeFilter: 'craftable',
   professionFilter: null,
   isLoading: true,
   inventory: {},
@@ -130,37 +130,45 @@ export const useItemsStore = create<ItemsStore>((set, get) => ({
   clearBuildList: () => set({ buildList: [] }),
   
   getFilteredItems: () => {
-    const { items, searchTerm, tierFilter, rarityFilter, recipeTypeFilter } = get();
+    const state = get();
+    const { items, searchTerm, tierFilter, rarityFilter, recipeTypeFilter } = state;
     
-    return Object.entries(items).filter(([id, item]) => {
-      // Search filter
-      if (searchTerm && !item.name.toLowerCase().includes(searchTerm.toLowerCase())) {
-        return false;
+    let filtered = Object.entries(items);
+    
+    // Apply search filter first for better performance
+    if (searchTerm.trim()) {
+      const searchLower = searchTerm.toLowerCase();
+      filtered = filtered.filter(([_, item]) => 
+        item.name.toLowerCase().includes(searchLower)
+      );
+    }
+    
+    // Apply tier filter
+    if (tierFilter !== null) {
+      filtered = filtered.filter(([_, item]) => item.tier === tierFilter);
+    }
+    
+    // Apply rarity filter
+    if (rarityFilter !== null) {
+      filtered = filtered.filter(([_, item]) => item.rarity === rarityFilter);
+    }
+    
+    // Apply recipe type filter
+    if (recipeTypeFilter === 'craftable') {
+      filtered = filtered.filter(([_, item]) => item.recipes && item.recipes.length > 0);
+    } else if (recipeTypeFilter === 'base') {
+      filtered = filtered.filter(([_, item]) => !item.recipes || item.recipes.length === 0);
+    }
+    
+    // Sort by tier first, then by name for better organization
+    filtered.sort(([, a], [, b]) => {
+      if (a.tier !== b.tier) {
+        return a.tier - b.tier;
       }
-      
-      // Tier filter
-      if (tierFilter !== null && item.tier !== tierFilter) {
-        return false;
-      }
-      
-      // Rarity filter
-      if (rarityFilter !== null && item.rarity !== rarityFilter) {
-        return false;
-      }
-      
-      // Recipe type filter
-      if (recipeTypeFilter) {
-        const hasRecipes = item.recipes && item.recipes.length > 0;
-        if (recipeTypeFilter === 'craftable' && !hasRecipes) {
-          return false;
-        }
-        if (recipeTypeFilter === 'base' && hasRecipes) {
-          return false;
-        }
-      }
-      
-      return true;
+      return a.name.localeCompare(b.name);
     });
+    
+    return filtered;
   },
   
   getInventoryQuantity: (itemId) => {

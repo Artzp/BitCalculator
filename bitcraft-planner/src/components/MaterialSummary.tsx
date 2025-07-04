@@ -30,12 +30,12 @@ const MaterialSummary: React.FC = () => {
 
   if (buildList.length === 0) {
     return (
-      <div className="text-center py-8">
-        <div className="bg-slate-50 rounded-lg p-6 border-2 border-dashed border-slate-300">
-          <div className="text-2xl mb-2">📋</div>
-          <div className="text-lg font-medium text-slate-600 mb-2">No materials calculated</div>
-          <div className="text-sm text-slate-500">
-            Add items to your build list to see material requirements
+      <div className="text-center py-6">
+        <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+          <div className="text-xl mb-2">📋</div>
+          <div className="text-sm font-medium text-slate-600 mb-1">No materials calculated</div>
+          <div className="text-xs text-slate-500">
+            Add items to your build list to see requirements
           </div>
         </div>
       </div>
@@ -46,40 +46,40 @@ const MaterialSummary: React.FC = () => {
   const completeMaterials = materials.filter(m => m.missing === 0);
 
   return (
-    <div className="space-y-4 overflow-auto">
-      {/* Summary Stats */}
+    <div className="space-y-3 overflow-auto">
+      {/* Summary Stats - Compact */}
       <div className="grid grid-cols-3 gap-2">
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
-          <div className="text-xl font-bold text-blue-800">{materials.length}</div>
+        <div className="bg-blue-50 border border-blue-200 rounded p-2 text-center">
+          <div className="text-lg font-bold text-blue-800">{materials.length}</div>
           <div className="text-xs text-blue-600 font-medium">Total</div>
         </div>
-        <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-center">
-          <div className="text-xl font-bold text-red-800">{missingMaterials.length}</div>
+        <div className="bg-red-50 border border-red-200 rounded p-2 text-center">
+          <div className="text-lg font-bold text-red-800">{missingMaterials.length}</div>
           <div className="text-xs text-red-600 font-medium">Missing</div>
         </div>
-        <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-center">
-          <div className="text-xl font-bold text-green-800">{completeMaterials.length}</div>
+        <div className="bg-green-50 border border-green-200 rounded p-2 text-center">
+          <div className="text-lg font-bold text-green-800">{completeMaterials.length}</div>
           <div className="text-xs text-green-600 font-medium">Ready</div>
         </div>
       </div>
 
-      {/* Export Button */}
+      {/* Export Button - Compact */}
       {missingMaterials.length > 0 && (
         <button
           onClick={exportToClipboard}
-          className="w-full bg-green-100 hover:bg-green-200 text-green-800 px-4 py-2 rounded-lg font-medium transition-colors border border-green-300"
+          className="w-full bg-green-100 hover:bg-green-200 text-green-800 px-3 py-2 rounded-lg text-sm font-medium transition-colors border border-green-300"
         >
-          📋 Copy Shopping List ({missingMaterials.length} items)
+          📋 Copy Shopping List ({missingMaterials.length})
         </button>
       )}
 
-      {/* Missing Materials First */}
+      {/* Missing Materials First - Compact */}
       {missingMaterials.length > 0 && (
         <div>
-          <h4 className="font-bold text-red-800 mb-3 border-b border-red-200 pb-2">
-            ❌ Missing Materials ({missingMaterials.length})
+          <h4 className="font-semibold text-red-800 mb-2 text-sm border-b border-red-200 pb-1">
+            ❌ Missing ({missingMaterials.length})
           </h4>
-          <div className="space-y-2">
+          <div className="space-y-1">
             {missingMaterials.map((material) => (
               <MaterialItem
                 key={material.itemId}
@@ -91,13 +91,16 @@ const MaterialSummary: React.FC = () => {
         </div>
       )}
 
-      {/* Complete Materials */}
+      {/* Complete Materials - Collapsible */}
       {completeMaterials.length > 0 && (
-        <div>
-          <h4 className="font-bold text-green-800 mb-3 border-b border-green-200 pb-2">
-            ✅ Ready Materials ({completeMaterials.length})
-          </h4>
-          <div className="space-y-2">
+        <details className="group">
+          <summary className="cursor-pointer font-semibold text-green-800 text-sm border-b border-green-200 pb-1 hover:text-green-900 list-none">
+            <span className="flex items-center gap-2">
+              <span className="transition-transform group-open:rotate-90">▶</span>
+              ✅ Ready ({completeMaterials.length})
+            </span>
+          </summary>
+          <div className="space-y-1 mt-2">
             {completeMaterials.map((material) => (
               <MaterialItem
                 key={material.itemId}
@@ -106,16 +109,19 @@ const MaterialSummary: React.FC = () => {
               />
             ))}
           </div>
-        </div>
+        </details>
       )}
 
-      {/* All Materials Section (if user wants to see everything) */}
+      {/* All Materials Section - Collapsible */}
       {materials.length > 0 && missingMaterials.length > 0 && completeMaterials.length > 0 && (
-        <details className="mt-4">
-          <summary className="cursor-pointer font-bold text-slate-600 hover:text-slate-800 mb-2">
-            📋 All Base Materials ({materials.length})
+        <details className="group">
+          <summary className="cursor-pointer font-semibold text-slate-600 text-sm hover:text-slate-800 list-none">
+            <span className="flex items-center gap-2">
+              <span className="transition-transform group-open:rotate-90">▶</span>
+              📋 All Materials ({materials.length})
+            </span>
           </summary>
-          <div className="space-y-2">
+          <div className="space-y-1 mt-2">
             {materials.map((material) => (
               <MaterialItem
                 key={`all-${material.itemId}`}
@@ -151,75 +157,68 @@ const MaterialItem: React.FC<MaterialItemProps> = ({ material, onInventoryChange
   const surplus = material.effectiveHave - material.needed;
 
   return (
-    <div className={`p-3 rounded-lg border-2 transition-all ${
+    <div className={`p-2 rounded border transition-all ${
       hasEnough 
         ? 'bg-green-50 border-green-200' 
         : 'bg-red-50 border-red-200'
     }`}>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-2">
+      {/* Header - Compact */}
+      <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-2">
-          <span className="font-bold text-slate-800">{material.itemName}</span>
-          {hasEnough && <span className="text-green-600 font-bold">✓</span>}
+          <span className="font-medium text-slate-800 text-sm truncate">{material.itemName}</span>
+          {hasEnough && <span className="text-green-600 text-xs font-bold">✓</span>}
         </div>
-        <div className="flex items-center gap-2 text-xs">
-          <span className="bg-slate-100 px-2 py-1 rounded text-slate-600 font-medium">
+        <div className="flex items-center gap-1 text-xs">
+          <span className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-600 font-medium">
             T{material.tier >= 0 ? material.tier : 'B'}
           </span>
-          <span className={`px-2 py-1 rounded font-semibold ${RARITY_COLORS[material.rarity as keyof typeof RARITY_COLORS]} bg-slate-100`}>
-            {RARITY_NAMES[material.rarity as keyof typeof RARITY_NAMES]}
+          <span className={`px-1.5 py-0.5 rounded font-medium ${RARITY_COLORS[material.rarity as keyof typeof RARITY_COLORS] || 'text-gray-400'} bg-slate-100`}>
+            {(RARITY_NAMES[material.rarity as keyof typeof RARITY_NAMES] || 'Unknown').charAt(0)}
           </span>
         </div>
       </div>
 
-      {/* Quantity Info */}
-      <div className="grid grid-cols-4 gap-2 text-center text-xs">
-        <div className="bg-blue-100 border border-blue-300 rounded p-2">
+      {/* Quantity Info - Compact Grid */}
+      <div className="grid grid-cols-4 gap-1 text-xs">
+        <div className="bg-blue-100 border border-blue-200 rounded p-1.5 text-center">
           <div className="text-blue-700 font-medium">NEED</div>
           <div className="text-blue-800 font-bold">{material.needed.toLocaleString()}</div>
         </div>
         
-        <div className="bg-green-100 border border-green-300 rounded p-2">
+        <div className="bg-green-100 border border-green-200 rounded p-1.5 text-center">
           <div className="text-green-700 font-medium">HAVE</div>
           <input
             type="number"
             value={material.have}
             onChange={(e) => onInventoryChange(material.itemId, e.target.value)}
-            className="w-full text-green-800 font-bold bg-transparent border-0 text-center focus:outline-none focus:ring-2 focus:ring-green-500 rounded"
+            className="w-full text-green-800 font-bold bg-transparent border-0 text-center focus:outline-none focus:ring-1 focus:ring-green-500 rounded text-xs"
             min="0"
             placeholder="0"
           />
         </div>
 
-        <div className="bg-purple-100 border border-purple-300 rounded p-2">
+        <div className="bg-purple-100 border border-purple-200 rounded p-1.5 text-center">
           <div className="text-purple-700 font-medium">TOTAL</div>
           <div className="text-purple-800 font-bold">{material.effectiveHave.toLocaleString()}</div>
         </div>
 
-        <div className={`border rounded p-2 ${
+        <div className={`border rounded p-1.5 text-center ${
           material.missing > 0 
-            ? 'bg-red-100 border-red-300' 
-            : 'bg-gray-100 border-gray-300'
+            ? 'bg-red-100 border-red-200' 
+            : 'bg-green-100 border-green-200'
         }`}>
           <div className={`font-medium ${
-            material.missing > 0 ? 'text-red-700' : 'text-gray-700'
+            material.missing > 0 ? 'text-red-700' : 'text-green-700'
           }`}>
-            {material.missing > 0 ? 'MISS' : 'SURPLUS'}
+            {material.missing > 0 ? 'NEED' : 'EXTRA'}
           </div>
           <div className={`font-bold ${
-            material.missing > 0 ? 'text-red-800' : 'text-gray-800'
+            material.missing > 0 ? 'text-red-800' : 'text-green-800'
           }`}>
             {material.missing > 0 ? material.missing.toLocaleString() : surplus.toLocaleString()}
           </div>
         </div>
       </div>
-
-      {/* Effective Inventory Note */}
-      {material.effectiveHave > material.have && (
-        <div className="mt-2 text-xs text-purple-600 bg-purple-50 rounded px-2 py-1">
-          +{(material.effectiveHave - material.have).toLocaleString()} from higher-tier items
-        </div>
-      )}
     </div>
   );
 };

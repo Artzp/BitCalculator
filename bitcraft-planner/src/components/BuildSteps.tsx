@@ -1,6 +1,7 @@
 import React from 'react';
 import { useItemsStore } from '../state/useItemsStore';
 import { RARITY_COLORS, RARITY_NAMES } from '../utils/constants';
+import { correctBuildingRequirement, getBuildingCorrectionInfo } from '../utils/buildingCorrections';
 
 interface CraftingStep {
   stepNumber: number;
@@ -19,6 +20,10 @@ interface CraftingStep {
   outputQuantity: number;
   skillRequirement: string | null;
   buildingRequirement: string | null;
+  buildingCorrectionInfo?: {
+    wasCorrected: boolean;
+    originalBuilding: string | null;
+  };
 }
 
 const BuildSteps: React.FC = () => {
@@ -151,7 +156,8 @@ const BuildSteps: React.FC = () => {
         outputQuantity: recipe.output_quantity,
         skillRequirement: recipe.skill_requirement ? 
           `${recipe.skill_requirement.skill_name} ${recipe.skill_requirement.skill_level}` : null,
-        buildingRequirement: recipe.building_requirement
+        buildingRequirement: correctBuildingRequirement(item.name, recipe.building_requirement),
+        buildingCorrectionInfo: getBuildingCorrectionInfo(item.name, recipe.building_requirement)
       });
     });
 
@@ -202,11 +208,11 @@ const BuildSteps: React.FC = () => {
 
   if (buildList.length === 0) {
     return (
-      <div className="text-center py-8">
-        <div className="bg-slate-50 rounded-lg p-6 border-2 border-dashed border-slate-300">
-          <div className="text-2xl mb-2">📋</div>
-          <div className="text-lg font-medium text-slate-600 mb-2">No crafting steps</div>
-          <div className="text-sm text-slate-500">
+      <div className="text-center py-6">
+        <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+          <div className="text-xl mb-2">📋</div>
+          <div className="text-sm font-medium text-slate-600 mb-1">No crafting steps</div>
+          <div className="text-xs text-slate-500">
             Add items to your build list to see crafting steps
           </div>
         </div>
@@ -216,11 +222,11 @@ const BuildSteps: React.FC = () => {
 
   if (steps.length === 0) {
     return (
-      <div className="text-center py-8">
-        <div className="bg-slate-50 rounded-lg p-6 border-2 border-dashed border-slate-300">
-          <div className="text-2xl mb-2">🏗️</div>
-          <div className="text-lg font-medium text-slate-600 mb-2">No crafting needed</div>
-          <div className="text-sm text-slate-500">
+      <div className="text-center py-6">
+        <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+          <div className="text-xl mb-2">🏗️</div>
+          <div className="text-sm font-medium text-slate-600 mb-1">No crafting needed</div>
+          <div className="text-xs text-slate-500">
             All items in your build list are base materials
           </div>
         </div>
@@ -229,217 +235,236 @@ const BuildSteps: React.FC = () => {
   }
 
   return (
-    <div className="space-y-4 overflow-auto">
-      {/* Header */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
-        <div className="text-2xl font-bold text-blue-800">{steps.length}</div>
-        <div className="text-sm text-blue-600 font-medium">Crafting Steps</div>
-        <div className="text-xs text-blue-500 mt-1">Follow these steps in order</div>
+    <div className="space-y-3 overflow-auto">
+      {/* Header - Compact */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 text-center">
+        <div className="text-lg font-bold text-blue-800">{steps.length}</div>
+        <div className="text-xs text-blue-600 font-medium">Crafting Steps</div>
       </div>
 
-      {/* Steps */}
-      <div className="space-y-4">
+      {/* Steps - Compact */}
+      <div className="space-y-2">
         {steps.map((step, index) => {
           const stepCanComplete = canCompleteStep(step);
           
           return (
-            <div
+            <details
               key={`${step.itemId}-${step.stepNumber}`}
-              className={`rounded-lg border-2 p-4 shadow-sm transition-all ${
+              className={`rounded-lg border transition-all ${
                 stepCanComplete 
-                  ? 'bg-green-50 border-green-300' 
+                  ? 'bg-green-50 border-green-200' 
                   : 'bg-white border-slate-200'
               }`}
             >
-              {/* Step Header */}
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <div className={`rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm ${
-                    stepCanComplete 
-                      ? 'bg-green-600 text-white' 
-                      : 'bg-blue-600 text-white'
-                  }`}>
-                    {stepCanComplete ? '✓' : step.stepNumber}
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-slate-800 text-lg">{step.itemName}</h3>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-medium text-slate-600 bg-slate-100 px-2 py-1 rounded">
-                        Tier {step.tier >= 0 ? step.tier : 'Base'}
-                      </span>
-                      <span className={`text-xs font-semibold px-2 py-1 rounded ${RARITY_COLORS[step.rarity as keyof typeof RARITY_COLORS]} bg-slate-100`}>
-                        {RARITY_NAMES[step.rarity as keyof typeof RARITY_NAMES]}
-                      </span>
-                      {stepCanComplete && (
-                        <span className="text-xs font-semibold px-2 py-1 rounded bg-green-100 text-green-800">
-                          Ready to Craft
+              <summary className="p-2 cursor-pointer hover:bg-slate-50 rounded-lg list-none">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className={`rounded-full w-6 h-6 flex items-center justify-center font-bold text-xs ${
+                      stepCanComplete 
+                        ? 'bg-green-600 text-white' 
+                        : 'bg-blue-600 text-white'
+                    }`}>
+                      {stepCanComplete ? '✓' : step.stepNumber}
+                    </div>
+                    <div>
+                      <div className="font-semibold text-slate-800 text-sm">{step.itemName}</div>
+                      <div className="flex items-center gap-1 flex-wrap">
+                        <span className="text-xs font-medium text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded">
+                          T{step.tier >= 0 ? step.tier : 'B'}
                         </span>
-                      )}
+                        <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${RARITY_COLORS[step.rarity as keyof typeof RARITY_COLORS] || 'text-gray-400'} bg-slate-100`}>
+                          {(RARITY_NAMES[step.rarity as keyof typeof RARITY_NAMES] || 'Unknown').charAt(0)}
+                        </span>
+                        {step.buildingRequirement && (
+                          <span className="text-xs font-medium text-purple-700 bg-purple-100 px-1.5 py-0.5 rounded">
+                            🏗️ {step.buildingRequirement}
+                          </span>
+                        )}
+                        {step.skillRequirement && (
+                          <span className="text-xs font-medium text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded">
+                            🎯 {step.skillRequirement}
+                          </span>
+                        )}
+                        {stepCanComplete && (
+                          <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-green-100 text-green-800">
+                            Ready
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-lg font-bold text-slate-800">{step.quantity}</div>
+                    <div className="text-xs text-slate-600">needed</div>
+                    <div className="text-xs text-slate-500">
+                      {Math.ceil(step.quantity / step.outputQuantity)} crafts
                     </div>
                   </div>
                 </div>
-                                <div className="text-right">
-                  <div className="text-2xl font-bold text-slate-800">{step.quantity}</div>
-                  <div className="text-xs text-slate-600">needed</div>
-                </div>
-              </div>
+              </summary>
 
-              {/* Crafting Info */}
-            <div className="bg-slate-50 rounded-lg p-3 mb-3">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="font-medium text-slate-700">Crafts needed:</span>
-                  <span className="ml-2 text-slate-800">{Math.ceil(step.quantity / step.outputQuantity)}</span>
-                </div>
-                <div>
-                  <span className="font-medium text-slate-700">Each craft makes:</span>
-                  <span className="ml-2 text-slate-800">{step.outputQuantity}</span>
-                </div>
-              </div>
-              
-              {/* Requirements */}
-              <div className="mt-2 space-y-1">
-                {step.skillRequirement && (
-                  <div className="text-xs text-blue-700 bg-blue-100 px-2 py-1 rounded inline-block mr-2">
-                    🎯 Requires: {step.skillRequirement}
+              <div className="p-2 pt-0">
+                {/* Crafting Info - Prominent Building/Skill Requirements */}
+                <div className="bg-slate-50 rounded p-2 mb-2">
+                  <div className="grid grid-cols-2 gap-2 text-xs mb-2">
+                    <div>
+                      <span className="font-medium text-slate-700">Crafts:</span>
+                      <span className="ml-1 text-slate-800">{Math.ceil(step.quantity / step.outputQuantity)}</span>
+                    </div>
+                    <div>
+                      <span className="font-medium text-slate-700">Per craft:</span>
+                      <span className="ml-1 text-slate-800">{step.outputQuantity}</span>
+                    </div>
                   </div>
-                )}
-                {step.buildingRequirement && (
-                  <div className="text-xs text-purple-700 bg-purple-100 px-2 py-1 rounded inline-block">
-                    🏗️ Building: {step.buildingRequirement}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Ingredients */}
-            <div>
-              <h4 className="font-medium text-slate-700 mb-2 text-sm">Required materials:</h4>
-              <div className="space-y-2">
-                {step.ingredients.map((ingredient) => {
-                  const currentHave = inventory[ingredient.id] || 0;
-                  const effectiveHave = getEffectiveInventoryQuantity(ingredient.id);
-                  const hasEnough = effectiveHave >= ingredient.quantity;
-                  const missing = Math.max(0, ingredient.quantity - effectiveHave);
                   
-                  return (
-                    <div
-                      key={ingredient.id}
-                      className={`rounded-lg p-3 border-2 transition-all ${
-                        hasEnough 
-                          ? 'bg-green-50 border-green-200' 
-                          : 'bg-red-50 border-red-200'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-3">
-                          <div>
-                            <div className="font-medium text-slate-800">{ingredient.name}</div>
-                            <div className="flex items-center gap-1">
-                              <span className="text-xs bg-slate-200 px-1 py-0.5 rounded">
-                                T{ingredient.tier >= 0 ? ingredient.tier : 'B'}
-                              </span>
-                              <span className={`text-xs px-1 py-0.5 rounded ${RARITY_COLORS[ingredient.rarity as keyof typeof RARITY_COLORS]} bg-slate-200`}>
-                                {RARITY_NAMES[ingredient.rarity as keyof typeof RARITY_NAMES]}
-                              </span>
+                  {/* Requirements - More Prominent */}
+                  <div className="space-y-1">
+                    {step.buildingRequirement && (
+                      <div className="space-y-1">
+                        <div className="text-xs text-purple-700 bg-purple-100 px-2 py-1 rounded font-medium border border-purple-200">
+                          🏗️ Building Required: {step.buildingRequirement}
+                        </div>
+                        {step.buildingCorrectionInfo?.wasCorrected && (
+                          <div className="text-xs text-orange-700 bg-orange-100 px-2 py-1 rounded font-medium border border-orange-200">
+                            ⚠️ Auto-corrected from: {step.buildingCorrectionInfo.originalBuilding}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {step.skillRequirement && (
+                      <div className="text-xs text-blue-700 bg-blue-100 px-2 py-1 rounded font-medium border border-blue-200">
+                        🎯 Skill Required: {step.skillRequirement}
+                      </div>
+                    )}
+                    {!step.buildingRequirement && !step.skillRequirement && (
+                      <div className="text-xs text-green-700 bg-green-100 px-2 py-1 rounded font-medium border border-green-200">
+                        ✋ No special requirements - craft anywhere
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Ingredients - Compact */}
+                <div>
+                  <h4 className="font-medium text-slate-700 mb-1 text-xs">Materials:</h4>
+                  <div className="space-y-1">
+                    {step.ingredients.map((ingredient) => {
+                      const currentHave = inventory[ingredient.id] || 0;
+                      const effectiveHave = getEffectiveInventoryQuantity(ingredient.id);
+                      const hasEnough = effectiveHave >= ingredient.quantity;
+                      const missing = Math.max(0, ingredient.quantity - effectiveHave);
+                      
+                      return (
+                        <div
+                          key={ingredient.id}
+                          className={`rounded p-2 border text-xs ${
+                            hasEnough 
+                              ? 'bg-green-50 border-green-200' 
+                              : 'bg-red-50 border-red-200'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center gap-2">
+                              <div>
+                                <div className="font-medium text-slate-800">{ingredient.name}</div>
+                                <div className="flex items-center gap-1">
+                                  <span className="text-xs bg-slate-200 px-1 py-0.5 rounded">
+                                    T{ingredient.tier >= 0 ? ingredient.tier : 'B'}
+                                  </span>
+                                  <span className={`text-xs px-1 py-0.5 rounded ${RARITY_COLORS[ingredient.rarity as keyof typeof RARITY_COLORS] || 'text-gray-400'} bg-slate-200`}>
+                                    {(RARITY_NAMES[ingredient.rarity as keyof typeof RARITY_NAMES] || 'Unknown').charAt(0)}
+                                  </span>
+                                </div>
+                              </div>
+                              {hasEnough && <span className="text-green-600 font-bold">✓</span>}
+                            </div>
+                            <div className="text-right">
+                              <div className="font-bold text-slate-800">
+                                {ingredient.quantity.toLocaleString()}
+                              </div>
+                              <div className="text-xs text-slate-600">needed</div>
                             </div>
                           </div>
-                          {hasEnough && <span className="text-green-600 font-bold text-lg">✓</span>}
-                        {!hasEnough && effectiveHave > 0 && (
-                          <span className="text-orange-600 font-bold text-sm">Partial</span>
-                        )}
-                        </div>
-                        <div className="text-right">
-                          <div className="text-lg font-bold text-slate-800">
-                            {ingredient.quantity.toLocaleString()}
-                          </div>
-                          <div className="text-xs text-slate-600">needed</div>
-                        </div>
-                      </div>
 
-                      {/* Inventory Management */}
-                      <div className="grid grid-cols-4 gap-2 text-center text-xs">
-                        <div className="bg-green-100 border border-green-300 rounded p-2">
-                          <div className="text-green-700 font-medium mb-1">HAVE</div>
-                          <input
-                            type="number"
-                            value={currentHave}
-                            onChange={(e) => handleInventoryChange(ingredient.id, e.target.value)}
-                            className="w-full text-green-800 font-bold bg-transparent border-0 text-center focus:outline-none focus:ring-2 focus:ring-green-500 rounded"
-                            min="0"
-                            placeholder="0"
-                          />
-                        </div>
+                          {/* Compact inventory grid */}
+                          <div className="grid grid-cols-4 gap-1 text-xs">
+                            <div className="bg-green-100 border border-green-200 rounded p-1 text-center">
+                              <div className="text-green-700 font-medium">HAVE</div>
+                              <input
+                                type="number"
+                                value={currentHave}
+                                onChange={(e) => handleInventoryChange(ingredient.id, e.target.value)}
+                                className="w-full text-green-800 font-bold bg-transparent border-0 text-center focus:outline-none focus:ring-1 focus:ring-green-500 rounded text-xs"
+                                min="0"
+                                placeholder="0"
+                              />
+                            </div>
 
-                        <div className={`border rounded p-2 ${
-                          effectiveHave >= ingredient.quantity 
-                            ? 'bg-green-100 border-green-300' 
-                            : 'bg-purple-100 border-purple-300'
-                        }`}>
-                          <div className={`font-medium ${
-                            effectiveHave >= ingredient.quantity ? 'text-green-700' : 'text-purple-700'
-                          }`}>
-                            TOTAL
-                          </div>
-                          <div className={`font-bold ${
-                            effectiveHave >= ingredient.quantity ? 'text-green-800' : 'text-purple-800'
-                          }`}>
-                            {effectiveHave.toLocaleString()}
-                          </div>
-                        </div>
+                            <div className={`border rounded p-1 text-center ${
+                              effectiveHave >= ingredient.quantity 
+                                ? 'bg-green-100 border-green-200' 
+                                : 'bg-purple-100 border-purple-200'
+                            }`}>
+                              <div className={`font-medium ${
+                                effectiveHave >= ingredient.quantity ? 'text-green-700' : 'text-purple-700'
+                              }`}>
+                                TOTAL
+                              </div>
+                              <div className={`font-bold ${
+                                effectiveHave >= ingredient.quantity ? 'text-green-800' : 'text-purple-800'
+                              }`}>
+                                {effectiveHave.toLocaleString()}
+                              </div>
+                            </div>
 
-                        <div className="bg-blue-100 border border-blue-300 rounded p-2">
-                          <div className="text-blue-700 font-medium">NEED</div>
-                          <div className="text-blue-800 font-bold">{ingredient.quantity.toLocaleString()}</div>
-                        </div>
+                            <div className="bg-blue-100 border border-blue-200 rounded p-1 text-center">
+                              <div className="text-blue-700 font-medium">NEED</div>
+                              <div className="text-blue-800 font-bold">{ingredient.quantity.toLocaleString()}</div>
+                            </div>
 
-                        <div className={`border rounded p-2 ${
-                          missing > 0 
-                            ? 'bg-red-100 border-red-300' 
-                            : 'bg-green-100 border-green-300'
-                        }`}>
-                          <div className={`font-medium ${
-                            missing > 0 ? 'text-red-700' : 'text-green-700'
-                          }`}>
-                            {missing > 0 ? 'MISS' : 'READY'}
-                          </div>
-                          <div className={`font-bold ${
-                            missing > 0 ? 'text-red-800' : 'text-green-800'
-                          }`}>
-                            {missing > 0 ? missing.toLocaleString() : '✓'}
+                            <div className={`border rounded p-1 text-center ${
+                              missing > 0 
+                                ? 'bg-red-100 border-red-200' 
+                                : 'bg-green-100 border-green-200'
+                            }`}>
+                              <div className={`font-medium ${
+                                missing > 0 ? 'text-red-700' : 'text-green-700'
+                              }`}>
+                                {missing > 0 ? 'MISS' : 'OK'}
+                              </div>
+                              <div className={`font-bold ${
+                                missing > 0 ? 'text-red-800' : 'text-green-800'
+                              }`}>
+                                {missing > 0 ? missing.toLocaleString() : '✓'}
+                              </div>
+                            </div>
                           </div>
                         </div>
-                      </div>
-
-                      {/* Effective Inventory Note */}
-                      {effectiveHave > currentHave && (
-                        <div className="mt-2 text-xs text-purple-600 bg-purple-50 rounded px-2 py-1">
-                          +{(effectiveHave - currentHave).toLocaleString()} from higher-tier items
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
-            </div>
-
-            {/* Progress indicator */}
-            {index < steps.length - 1 && (
-              <div className="flex justify-center mt-4">
-                <div className="w-px h-6 bg-blue-300"></div>
-                <div className="absolute bg-blue-600 rounded-full w-2 h-2 mt-2"></div>
-              </div>
-            )}
-          </div>
+            </details>
           );
         })}
       </div>
 
-      {/* Completion Message */}
-      <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
-        <div className="text-green-800 font-bold">🎉 Build Complete!</div>
-        <div className="text-green-600 text-sm mt-1">
-          After completing all {steps.length} steps, you'll have your items ready
+      {/* Completion Message - Compact */}
+      <div className="bg-green-50 border border-green-200 rounded-lg p-2 text-center">
+        <div className="text-green-800 font-semibold text-sm">🎉 Build Complete!</div>
+        <div className="text-green-600 text-xs mt-1">
+          Complete all {steps.length} steps to finish your build
+        </div>
+      </div>
+      
+      {/* Data Correction Notice */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 text-center">
+        <div className="text-blue-800 font-medium text-xs">
+          📝 Some building requirements have been auto-corrected for accuracy
+        </div>
+        <div className="text-blue-600 text-xs mt-1">
+          Orange warnings show where data was fixed (e.g., molten metals moved from Fishing Station to Smithing Station)
         </div>
       </div>
     </div>
