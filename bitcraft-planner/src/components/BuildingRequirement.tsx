@@ -2,7 +2,6 @@ import React from 'react';
 import {
   getBuildingBaseType,
   getBuildingTier,
-  getBuildingTierName,
   getBuildingTypeColor,
   getBuildingTypeIcon,
   getBuildingCategory,
@@ -34,7 +33,6 @@ const BuildingRequirement: React.FC<BuildingRequirementProps> = ({
 
   const baseType = getBuildingBaseType(buildingName);
   const tier = getBuildingTier(buildingName);
-  const tierName = getBuildingTierName(buildingName);
   const colorClasses = getBuildingTypeColor(buildingName);
   const icon = getBuildingTypeIcon(buildingName);
   const category = getBuildingCategory(buildingName);
