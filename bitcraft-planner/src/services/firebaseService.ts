@@ -9,10 +9,12 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { Inventory, BuildListItem } from '../state/useItemsStore';
+import { SettlementData } from '../types/Settlement';
 
 export interface UserData {
   inventory: Inventory;
   buildList: BuildListItem[];
+  settlement: SettlementData | null;
   lastUpdated: any; // Firestore timestamp
   version: number; // For data versioning
 }
@@ -73,7 +75,37 @@ export class FirebaseService {
     if (data.buildList && !Array.isArray(data.buildList)) {
       return false;
     }
+    if (data.settlement && typeof data.settlement !== 'object') {
+      return false;
+    }
     return true;
+  }
+
+  // Clean data by removing undefined values (Firestore doesn't support undefined)
+  private cleanDataForFirestore(obj: any): any {
+    if (obj === null || obj === undefined) {
+      return null;
+    }
+    
+    if (Array.isArray(obj)) {
+      return obj.map(item => this.cleanDataForFirestore(item));
+    }
+    
+    if (obj instanceof Date) {
+      return obj;
+    }
+    
+    if (typeof obj === 'object') {
+      const cleaned: any = {};
+      for (const [key, value] of Object.entries(obj)) {
+        if (value !== undefined) {
+          cleaned[key] = this.cleanDataForFirestore(value);
+        }
+      }
+      return cleaned;
+    }
+    
+    return obj;
   }
 
   // Check if database is available
@@ -122,8 +154,9 @@ export class FirebaseService {
     this.updateSaveStatus({ isSaving: true, error: null });
 
     const userDocRef = this.getUserDocRef(userId);
+    const cleanedData = this.cleanDataForFirestore(data);
     const dataToSave = {
-      ...data,
+      ...cleanedData,
       lastUpdated: serverTimestamp(),
       version: (data.version || 0) + 1
     };
@@ -171,6 +204,7 @@ export class FirebaseService {
         const userData = {
           inventory: data.inventory || {},
           buildList: data.buildList || [],
+          settlement: data.settlement || null,
           lastUpdated: data.lastUpdated,
           version: data.version || 1
         };
@@ -211,9 +245,18 @@ export class FirebaseService {
     return this.saveUserData(userId, { buildList });
   }
 
-  async saveComplete(userId: string, inventory: Inventory, buildList: BuildListItem[]): Promise<void> {
+  async saveSettlement(userId: string, settlement: SettlementData): Promise<void> {
+    console.log('💾 Saving settlement data...');
+    return this.saveUserData(userId, { settlement });
+  }
+
+  async saveComplete(userId: string, inventory: Inventory, buildList: BuildListItem[], settlement?: SettlementData): Promise<void> {
     console.log('💾 Saving complete user data...');
-    return this.saveUserData(userId, { inventory, buildList });
+    const dataToSave: Partial<UserData> = { inventory, buildList };
+    if (settlement !== undefined) {
+      dataToSave.settlement = settlement;
+    }
+    return this.saveUserData(userId, dataToSave);
   }
 
   // Real-time listener for user data
@@ -227,6 +270,7 @@ export class FirebaseService {
           callback({
             inventory: data.inventory || {},
             buildList: data.buildList || [],
+            settlement: data.settlement || null,
             lastUpdated: data.lastUpdated,
             version: data.version || 1
           });

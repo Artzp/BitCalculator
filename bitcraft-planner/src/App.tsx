@@ -1,7 +1,9 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useItemsStore } from './state/useItemsStore';
+import { useSettlementStore } from './state/useSettlementStore';
 import { ItemsData } from './types/Item';
 import BitCalculatorPage from './components/BitCalculatorPage';
+import SettlementPage from './components/SettlementPage';
 import { AuthHeader } from './components/AuthHeader';
 import { useAuth } from './hooks/useAuth';
 import { firebaseService, SaveStatus } from './services/firebaseService';
@@ -19,6 +21,11 @@ function App() {
     buildList
   } = useItemsStore();
   
+  const {
+    settlement,
+    resetSettlement
+  } = useSettlementStore();
+  
   const { user, loading: authLoading } = useAuth();
   const [saveStatus, setSaveStatus] = useState<SaveStatus>({
     isSaving: false,
@@ -27,6 +34,7 @@ function App() {
     error: null
   });
   const [dataLoaded, setDataLoaded] = useState(false);
+  const [currentPage, setCurrentPage] = useState<'calculator' | 'settlement'>('calculator');
   
   // Subscribe to save status changes
   useEffect(() => {
@@ -67,16 +75,19 @@ function App() {
             console.log('📥 User data loaded:', userData);
             setInventory(userData.inventory || {});
             setBuildList(userData.buildList || []);
+            // Settlement data is now handled automatically by the settlement store
           } else {
             console.log('🆕 No saved data found - starting fresh');
             setInventory({});
             setBuildList([]);
+            // Settlement will be initialized by the SettlementPage component
           }
         } catch (error) {
           console.error('❌ Failed to load user data:', error);
           // Start with empty data on error
           setInventory({});
           setBuildList([]);
+          resetSettlement();
         } finally {
           // Always set dataLoaded to true to prevent infinite loading
           setDataLoaded(true);
@@ -89,19 +100,20 @@ function App() {
       setDataLoaded(false);
       setInventory({});
       setBuildList([]);
+      resetSettlement();
     }
-  }, [user, dataLoaded, setInventory, setBuildList]);
+  }, [user, dataLoaded, setInventory, setBuildList, resetSettlement]);
 
   // Debounced save function
   const debouncedSave = useCallback(
     (() => {
       let timeoutId: NodeJS.Timeout;
-      return (inventory: any, buildList: any) => {
+      return (inventory: any, buildList: any, settlementData?: any) => {
         clearTimeout(timeoutId);
         timeoutId = setTimeout(async () => {
           if (user && dataLoaded) {
             try {
-              await firebaseService.saveComplete(user.uid, inventory, buildList);
+              await firebaseService.saveComplete(user.uid, inventory, buildList, settlementData);
             } catch (error) {
               console.error('❌ Failed to save user data:', error);
             }
@@ -112,19 +124,19 @@ function App() {
     [user, dataLoaded]
   );
 
-  // Save user data when inventory or build list changes
+  // Save user data when inventory, build list, or settlement changes
   useEffect(() => {
     if (user && dataLoaded && !isLoading) {
-      debouncedSave(inventory, buildList);
+      debouncedSave(inventory, buildList, settlement || undefined);
     }
-  }, [user, inventory, buildList, isLoading, dataLoaded, debouncedSave]);
+  }, [user, inventory, buildList, settlement, isLoading, dataLoaded, debouncedSave]);
 
   // Auto-save every 30 seconds if there are changes
   useEffect(() => {
     if (user && dataLoaded && !saveStatus.isSaving) {
       const autoSaveInterval = setInterval(async () => {
         try {
-          await firebaseService.saveComplete(user.uid, inventory, buildList);
+          await firebaseService.saveComplete(user.uid, inventory, buildList, settlement || undefined);
         } catch (error) {
           console.error('❌ Auto-save failed:', error);
         }
@@ -132,7 +144,7 @@ function App() {
 
       return () => clearInterval(autoSaveInterval);
     }
-  }, [user, dataLoaded, inventory, buildList, saveStatus.isSaving]);
+  }, [user, dataLoaded, inventory, buildList, settlement, saveStatus.isSaving]);
 
   if (authLoading || isLoading) {
     return (
@@ -155,6 +167,36 @@ function App() {
         {/* Save Status Indicator */}
         {user && <SaveStatusIndicator saveStatus={saveStatus} />}
         
+        {/* Navigation */}
+        <div className="mb-6">
+          <nav className="bg-white rounded-xl shadow-lg border border-slate-200">
+            <div className="flex">
+              <button
+                onClick={() => setCurrentPage('calculator')}
+                className={`flex-1 flex items-center justify-center gap-2 px-6 py-4 font-medium transition-all duration-200 rounded-l-xl ${
+                  currentPage === 'calculator'
+                    ? 'bg-blue-600 text-white shadow-lg'
+                    : 'text-slate-600 hover:text-slate-800 hover:bg-slate-50'
+                }`}
+              >
+                <span className="text-xl">🧮</span>
+                <span>Bit Calculator</span>
+              </button>
+              <button
+                onClick={() => setCurrentPage('settlement')}
+                className={`flex-1 flex items-center justify-center gap-2 px-6 py-4 font-medium transition-all duration-200 rounded-r-xl ${
+                  currentPage === 'settlement'
+                    ? 'bg-green-600 text-white shadow-lg'
+                    : 'text-slate-600 hover:text-slate-800 hover:bg-slate-50'
+                }`}
+              >
+                <span className="text-xl">🏘️</span>
+                <span>Settlement System</span>
+              </button>
+            </div>
+          </nav>
+        </div>
+        
         {/* Loading overlay for user data - with timeout protection */}
         {user && saveStatus.isLoading && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -176,9 +218,13 @@ function App() {
           </div>
         )}
         
-        {/* Main Application - Bit Calculator */}
-        <div className="h-[calc(100vh-200px)]">
-          <BitCalculatorPage />
+        {/* Main Application Content */}
+        <div className="h-[calc(100vh-280px)]">
+          {currentPage === 'calculator' ? (
+            <BitCalculatorPage />
+          ) : (
+            <SettlementPage />
+          )}
         </div>
       </div>
     </div>
