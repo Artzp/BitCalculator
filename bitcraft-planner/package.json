@@ -2,7 +2,7 @@
   "name": "bitcraft-calculator",
   "version": "0.1.0",
   "private": true,
-  "homepage": "https://bitcraftcalculator.com",
+  "homepage": "https://bitcraftcalculator.web.app",
   "dependencies": {
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
@@ -12,12 +12,11 @@
     "@types/node": "^24.0.6",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
-    "autoprefixer": "^10.4.21",
+    "firebase": "^11.10.0",
     "postcss": "^8.5.6",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-scripts": "5.0.1",
-    "tailwindcss": "^4.1.11",
     "typescript": "^5.8.3",
     "web-vitals": "^2.1.4",
     "zustand": "^5.0.6"
@@ -26,7 +25,13 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "deploy": "npm run build && firebase deploy",
+    "deploy:hosting": "firebase deploy --only hosting",
+    "deploy:safe": "npm run build && firebase deploy --only hosting",
+    "deploy:force": "npm run build && firebase deploy --only hosting --force",
+    "deploy:database": "firebase deploy --only firestore",
+    "deploy:all": "npm run build && firebase deploy"
   },
   "eslintConfig": {
     "extends": [
@@ -47,6 +52,9 @@
     ]
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.1.11"
+    "@tailwindcss/forms": "^0.5.10",
+    "@tailwindcss/postcss": "^4.1.11",
+    "autoprefixer": "^10.4.21",
+    "tailwindcss": "^4.1.11"
   }
 }

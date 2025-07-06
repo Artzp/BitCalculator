@@ -44,6 +44,7 @@ interface ItemsStore {
   setRecipeTypeFilter: (type: 'all' | 'craftable' | 'base' | null) => void;
   setProfessionFilter: (profession: string | null) => void;
   setIsLoading: (loading: boolean) => void;
+  setInventory: (inventory: Inventory) => void;
   setInventoryItem: (itemId: string, quantity: number) => void;
   removeInventoryItem: (itemId: string) => void;
   clearInventory: () => void;
@@ -53,6 +54,7 @@ interface ItemsStore {
   addToBuildList: (itemId: string, quantity: number, recipeIndex?: number) => void;
   removeFromBuildList: (itemId: string) => void;
   updateBuildListItem: (itemId: string, quantity: number, recipeIndex?: number) => void;
+  setBuildList: (buildList: BuildListItem[]) => void;
   clearBuildList: () => void;
   
   getFilteredItems: () => [string, Item][];
@@ -81,6 +83,7 @@ export const useItemsStore = create<ItemsStore>((set, get) => ({
   setRecipeTypeFilter: (type) => set({ recipeTypeFilter: type }),
   setProfessionFilter: (profession) => set({ professionFilter: profession }),
   setIsLoading: (loading) => set({ isLoading: loading }),
+  setInventory: (inventory) => set({ inventory }),
   setInventoryItem: (itemId, quantity) => set((state) => ({
     inventory: quantity > 0 
       ? { ...state.inventory, [itemId]: quantity }
@@ -127,6 +130,7 @@ export const useItemsStore = create<ItemsStore>((set, get) => ({
     }
   }),
   
+  setBuildList: (buildList) => set({ buildList }),
   clearBuildList: () => set({ buildList: [] }),
   
   getFilteredItems: () => {
