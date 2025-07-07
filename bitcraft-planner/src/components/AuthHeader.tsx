@@ -8,6 +8,20 @@ export const AuthHeader: React.FC = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showDataManager, setShowDataManager] = useState(false);
 
+  // Debug: Log user data to console
+  React.useEffect(() => {
+    if (user) {
+      console.log('👤 User data:', {
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName,
+        photoURL: user.photoURL,
+        emailVerified: user.emailVerified,
+        providerData: user.providerData
+      });
+    }
+  }, [user]);
+
   const handleLogout = async () => {
     try {
       await logout();
@@ -26,7 +40,14 @@ export const AuthHeader: React.FC = () => {
         {user ? (
           <div className="flex items-center space-x-4">
             <div className="text-sm text-gray-600">
-              Welcome, <span className="font-semibold">{user.displayName || user.email}</span>
+              <div>Welcome, <span className="font-semibold">{user.displayName || user.email || 'User'}</span></div>
+              {user.email && user.displayName && (
+                <div className="text-xs text-gray-500">{user.email}</div>
+              )}
+            </div>
+            <div className="text-xs text-gray-500 mt-1">
+              {user.emailVerified ? '✅ Verified' : '⚠️ Unverified'} • 
+              {user.providerData[0]?.providerId === 'google.com' ? '📧 Google' : '🔐 Email'}
             </div>
             <button
               onClick={() => setShowDataManager(true)}

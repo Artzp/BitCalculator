@@ -219,8 +219,29 @@ export const TaskManagement: React.FC = () => {
 
                 {/* Task Controls */}
                 <div className="flex justify-between items-center">
-                  <div className="text-sm text-gray-600">
-                    Assigned: {getPlayerName(task.assignedPlayerId)}
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm text-gray-600">Assigned:</span>
+                    <select
+                      value={task.assignedPlayerId || ''}
+                      onChange={(e) => {
+                        const playerId = e.target.value || undefined;
+                        if (playerId) {
+                          assignTaskToPlayer(task.id, playerId);
+                        } else {
+                          updateTask(task.id, { assignedPlayerId: undefined, status: 'planned' });
+                        }
+                      }}
+                      className="text-sm border border-gray-300 rounded px-2 py-1 min-w-[120px]"
+                    >
+                      <option value="">Unassigned</option>
+                      {players
+                        .filter(player => player.isActive)
+                        .map(player => (
+                          <option key={player.id} value={player.id}>
+                            {player.name}
+                          </option>
+                        ))}
+                    </select>
                   </div>
                   
                   {task.status !== 'completed' && (

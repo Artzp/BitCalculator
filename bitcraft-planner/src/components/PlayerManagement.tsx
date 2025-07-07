@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useSettlementStore } from '../state/useSettlementStore';
+import { useAuth } from '../hooks/useAuth';
 
 export const PlayerManagement: React.FC = () => {
   const { 
@@ -9,6 +10,7 @@ export const PlayerManagement: React.FC = () => {
     removePlayer, 
     getPlayerWorkload 
   } = useSettlementStore();
+  const { user } = useAuth();
 
   const [newPlayerName, setNewPlayerName] = useState('');
   const [editingPlayer, setEditingPlayer] = useState<string | null>(null);
@@ -21,17 +23,17 @@ export const PlayerManagement: React.FC = () => {
     }
   };
 
-  const handleStartEdit = (playerId: string, currentName: string) => {
+  const handleEditPlayer = (playerId: string, currentName: string) => {
     setEditingPlayer(playerId);
     setEditPlayerName(currentName);
   };
 
-  const handleSaveEdit = (playerId: string) => {
-    if (editPlayerName.trim()) {
-      updatePlayer(playerId, { name: editPlayerName.trim() });
+  const handleSaveEdit = () => {
+    if (editingPlayer && editPlayerName.trim()) {
+      updatePlayer(editingPlayer, { name: editPlayerName.trim() });
+      setEditingPlayer(null);
+      setEditPlayerName('');
     }
-    setEditingPlayer(null);
-    setEditPlayerName('');
   };
 
   const handleCancelEdit = () => {
@@ -60,9 +62,40 @@ export const PlayerManagement: React.FC = () => {
   }
 
   const players = settlement.players;
+  const activePlayers = players.filter(p => p.isActive);
+  const inactivePlayers = players.filter(p => !p.isActive);
 
   return (
     <div className="space-y-6">
+      {/* Settlement Owner Profile */}
+      {user && (
+        <div className="bg-gradient-to-r from-blue-50 to-green-50 rounded-xl p-4 border border-blue-200">
+          <div className="flex items-center gap-3">
+            {user.photoURL && (
+              <img 
+                src={user.photoURL} 
+                alt="Profile" 
+                className="w-10 h-10 rounded-full border-2 border-white shadow-md"
+              />
+            )}
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold text-slate-800">Settlement Owner</h3>
+                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">👑 Admin</span>
+              </div>
+              <div className="text-sm text-slate-600">
+                <div className="font-medium">{user.displayName || 'Unknown User'}</div>
+                <div className="text-xs text-slate-500">{user.email}</div>
+              </div>
+              <div className="text-xs text-slate-500 mt-1">
+                {user.emailVerified ? '✅ Verified' : '⚠️ Unverified'} • 
+                {user.providerData[0]?.providerId === 'google.com' ? '📧 Google Account' : '🔐 Email Account'}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Add Player Section */}
       <div className="bg-white rounded-xl p-6 shadow-lg border border-slate-200">
         <h2 className="text-xl font-bold text-slate-800 mb-4">Add New Player</h2>
@@ -126,7 +159,7 @@ export const PlayerManagement: React.FC = () => {
                           type="text"
                           value={editPlayerName}
                           onChange={(e) => setEditPlayerName(e.target.value)}
-                          onKeyPress={(e) => e.key === 'Enter' && handleSaveEdit(player.id)}
+                          onKeyPress={(e) => e.key === 'Enter' && handleSaveEdit()}
                           className="px-3 py-1 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                           autoFocus
                         />
@@ -145,7 +178,7 @@ export const PlayerManagement: React.FC = () => {
                       {editingPlayer === player.id ? (
                         <>
                           <button
-                            onClick={() => handleSaveEdit(player.id)}
+                            onClick={handleSaveEdit}
                             className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 transition-colors"
                           >
                             Save
@@ -160,7 +193,7 @@ export const PlayerManagement: React.FC = () => {
                       ) : (
                         <>
                           <button
-                            onClick={() => handleStartEdit(player.id, player.name)}
+                            onClick={() => handleEditPlayer(player.id, player.name)}
                             className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors"
                           >
                             Edit
@@ -227,13 +260,13 @@ export const PlayerManagement: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="text-center p-4 bg-green-50 rounded-lg">
               <div className="text-2xl font-bold text-green-600">
-                {players.filter(p => p.isActive).length}
+                {activePlayers.length}
               </div>
               <div className="text-sm text-green-700">Active Players</div>
             </div>
             <div className="text-center p-4 bg-gray-50 rounded-lg">
               <div className="text-2xl font-bold text-gray-600">
-                {players.filter(p => !p.isActive).length}
+                {inactivePlayers.length}
               </div>
               <div className="text-sm text-gray-700">Inactive Players</div>
             </div>

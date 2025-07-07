@@ -25,10 +25,17 @@ export function calculateMaterials(
 ): CalculationResult {
   const materials = new Map<string, MaterialRequirement>();
   const intermediates = new Map<string, MaterialRequirement>();
+  const processing = new Set<string>(); // Track items currently being processed to prevent cycles
   
   function processItem(itemId: string, quantity: number, recipeIdx: number = 0) {
     const item = items[itemId];
     if (!item) return;
+    
+    // Check for circular dependency
+    if (processing.has(itemId)) {
+      console.warn(`Circular dependency detected for item: ${item.name} (${itemId})`);
+      return;
+    }
     
     // If no recipes, this is a base item
     if (!item.recipes || item.recipes.length === 0) {
@@ -63,11 +70,17 @@ export function calculateMaterials(
     // Calculate how many crafting operations we need
     const craftingOperations = Math.ceil(quantity / recipe.output_quantity);
     
+    // Mark this item as being processed
+    processing.add(itemId);
+    
     // Process each ingredient
     recipe.consumed_items.forEach(ingredient => {
       const requiredQuantity = craftingOperations * ingredient.quantity;
-      processItem(ingredient.id.toString(), requiredQuantity);
+      processItem(ingredient.id.toString(), requiredQuantity, 0); // Always use recipe index 0 for ingredients
     });
+    
+    // Remove from processing set when done
+    processing.delete(itemId);
   }
   
   processItem(targetItemId, targetQuantity, recipeIndex);

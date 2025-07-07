@@ -1,18 +1,35 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSettlementStore } from '../state/useSettlementStore';
 import { useAuth } from '../hooks/useAuth';
 // import SettlementOverview from './SettlementOverview';
-// import { PlayerManagement } from './PlayerManagement';
+import { PlayerManagement } from './PlayerManagement';
 import ProjectManagement from './ProjectManagement';
 import { TaskManagement } from './TaskManagement';
 
 import { SimpleInventory } from './SimpleInventory';
 import { InventoryReservationDemo } from './InventoryReservationDemo';
+import { DatabaseDebugger } from './DatabaseDebugger';
+import { isAdmin } from '../utils/adminCheck';
 
 const SettlementPage: React.FC = () => {
   const { settlement } = useSettlementStore();
   const { user } = useAuth();
-  const [activeView, setActiveView] = useState<'overview' | 'players' | 'projects' | 'tasks' | 'inventory'>('projects');
+  const [activeView, setActiveView] = useState<string>('projects');
+  const [userIsAdmin, setUserIsAdmin] = useState<boolean>(false);
+
+  // Update admin status when user changes
+  useEffect(() => {
+    const adminStatus = isAdmin();
+    setUserIsAdmin(adminStatus);
+    
+    // Debug logging
+    console.log('🔍 Admin Status Check:', {
+      user: user?.email || 'Not logged in',
+      userId: user?.uid || 'No UID',
+      isAdmin: adminStatus,
+      timestamp: new Date().toISOString()
+    });
+  }, [user]);
 
   const getTabIcon = (view: string) => {
     switch (view) {
@@ -21,6 +38,7 @@ const SettlementPage: React.FC = () => {
       case 'projects': return '🏗️';
       case 'tasks': return '📋';
       case 'inventory': return '📦';
+      case 'debug': return '🔍';
       default: return '📊';
     }
   };
@@ -32,6 +50,7 @@ const SettlementPage: React.FC = () => {
       case 'projects': return 'Projects';
       case 'tasks': return 'Tasks';
       case 'inventory': return 'Inventory';
+      case 'debug': return 'Debug';
       default: return 'Unknown';
     }
   };
@@ -47,17 +66,44 @@ const SettlementPage: React.FC = () => {
     };
   };
 
-  const tabs = ['overview', 'players', 'projects', 'tasks', 'inventory'] as const;
+  const baseTabs = ['overview', 'players', 'projects', 'tasks', 'inventory'];
+  const tabs = userIsAdmin ? [...baseTabs, 'debug'] : baseTabs;
   const tabCounts = getTabCounts();
+
+  // Debug logging for tab generation
+  useEffect(() => {
+    console.log('🔍 Tab Generation Debug:', {
+      userIsAdmin,
+      totalTabs: tabs.length,
+      tabs: tabs,
+      hasDebugTab: tabs.includes('debug' as any)
+    });
+  }, [userIsAdmin, tabs]);
 
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
       <div className="bg-gradient-to-r from-green-600 to-blue-600 text-white p-4 rounded-xl mb-4 shadow-lg">
-        <h1 className="text-2xl font-bold mb-1">🏘️ Settlement System</h1>
-        <p className="text-green-100 text-sm">
-          {settlement?.name || 'Loading...'} - Collaborative project management for BitCraft
-        </p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-bold mb-1 flex items-center gap-2">
+              🏘️ Settlement System
+              {userIsAdmin && (
+                <span className="px-2 py-1 bg-red-500 text-white text-xs font-medium rounded-full">
+                  🔑 ADMIN
+                </span>
+              )}
+            </h1>
+            <p className="text-green-100 text-sm">
+              {settlement?.name || 'Loading...'} - Collaborative project management for BitCraft
+            </p>
+            {userIsAdmin && (
+              <p className="text-yellow-200 text-xs mt-1">
+                Admin access enabled for: {user?.email}
+              </p>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Tab Navigation */}
@@ -92,7 +138,7 @@ const SettlementPage: React.FC = () => {
       {/* Content Area */}
       <div className="flex-1 min-h-0">
         {activeView === 'overview' && <div>Overview - Coming Soon</div>}
-        {activeView === 'players' && <div className="p-6 text-center text-gray-500">Player Management - Coming Soon</div>}
+        {activeView === 'players' && <PlayerManagement />}
         {activeView === 'projects' && <ProjectManagement />}
         {activeView === 'tasks' && <TaskManagement />}
         {activeView === 'inventory' && (
@@ -101,6 +147,7 @@ const SettlementPage: React.FC = () => {
             <SimpleInventory />
           </div>
         )}
+        {activeView === 'debug' && <DatabaseDebugger />}
       </div>
     </div>
   );

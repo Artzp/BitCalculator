@@ -3,6 +3,14 @@ import { devtools } from 'zustand/middleware';
 import { Player, Project, ProjectItem, Task, SettlementInventoryItem, SettlementData } from '../types/Settlement';
 import { ItemsData } from '../types/Item';
 import { createProjectFromItem, createEmptyProject, addItemToProject, generateTasksForProject, calculateProjectProgress, getAvailableTasks, updateTasksForInventoryChange, getProjectMaterials } from '../utils/settlementIntegration';
+import { projectLogger } from '../utils/projectLogger';
+
+// Flag to trigger immediate save for critical operations
+let triggerImmediateSave: ((settlement: SettlementData) => void) | null = null;
+
+export const setImmediateSaveCallback = (callback: (settlement: SettlementData) => void) => {
+  triggerImmediateSave = callback;
+};
 
 interface SettlementStore {
   // Core data
@@ -50,6 +58,12 @@ interface SettlementStore {
   
   // Reset function
   resetSettlement: () => void;
+
+  // Load settlement data from Firebase
+  loadSettlement: (settlementData: SettlementData) => void;
+
+  // Set settlement data (for Firebase loading)
+  setSettlement: (settlementData: SettlementData | null, options?: { force?: boolean }) => void;
 
   // New methods for inventory reservation
   reserveMaterialsForProject: (items: ItemsData, projectId: string) => boolean;
@@ -146,12 +160,46 @@ export const useSettlementStore = create<SettlementStore>()(
         progressPercentage: 0
       };
       
-      set((state) => ({
-        settlement: {
+      projectLogger.logProjectCreate(
+        'useSettlementStore.createProject',
+        { projectId, name, description }
+      );
+      
+      set((state) => {
+        const newSettlement = {
           ...state.settlement,
           projects: [...state.settlement.projects, project]
+        };
+        
+        projectLogger.logStateChange(
+          'useSettlementStore.createProject',
+          'PROJECT_ADDED_TO_SETTLEMENT',
+          newSettlement
+        );
+        
+        console.log('🔄 Project created, new settlement:', {
+          projectCount: newSettlement.projects.length,
+          latestProject: project.name,
+          allProjects: newSettlement.projects.map(p => p.name)
+        });
+        
+        // Trigger immediate save for critical operations
+        if (triggerImmediateSave) {
+          // Use a longer delay to ensure state is fully updated
+          setTimeout(() => {
+            console.log('⚡ Triggering immediate save with projects:', newSettlement.projects.length);
+            projectLogger.logAutoSave(
+              'useSettlementStore.createProject',
+              'IMMEDIATE_SAVE_TRIGGERED',
+              'Project creation',
+              { projectCount: newSettlement.projects.length }
+            );
+            triggerImmediateSave!(newSettlement);
+          }, 500); // Increased delay
         }
-      }));
+        
+        return { settlement: newSettlement };
+      });
       
       return projectId;
     },
@@ -197,29 +245,68 @@ export const useSettlementStore = create<SettlementStore>()(
     addItemToProject: (projectId: string, itemId: string, itemName: string, quantity: number, recipeIndex = 0) => {
       const newItem = addItemToProject({} as Project, itemId, itemName, quantity, recipeIndex);
       
-      set((state) => ({
-        settlement: {
+      set((state) => {
+        const project = state.settlement.projects.find(p => p.id === projectId);
+        if (!project) {
+          console.error('❌ Project not found:', projectId);
+          return state;
+        }
+        
+        const newSettlement = {
           ...state.settlement,
           projects: state.settlement.projects.map(project =>
             project.id === projectId 
               ? { ...project, items: [...project.items, newItem] }
               : project
           )
+        };
+        
+        console.log('📦 Item added to project:', {
+          projectId,
+          itemName,
+          quantity,
+          totalItemsInProject: newSettlement.projects.find(p => p.id === projectId)?.items.length || 0
+        });
+        
+        // Trigger immediate save for critical operations
+        if (triggerImmediateSave) {
+          setTimeout(() => triggerImmediateSave!(newSettlement), 100);
         }
-      }));
+        
+        return { settlement: newSettlement };
+      });
     },
     
     removeItemFromProject: (projectId: string, itemId: string) => {
-      set((state) => ({
-        settlement: {
+      set((state) => {
+        const project = state.settlement.projects.find(p => p.id === projectId);
+        if (!project) {
+          console.error('❌ Project not found:', projectId);
+          return state;
+        }
+        
+        const newSettlement = {
           ...state.settlement,
           projects: state.settlement.projects.map(project =>
             project.id === projectId 
               ? { ...project, items: project.items.filter(item => item.itemId !== itemId) }
               : project
           )
+        };
+        
+        console.log('🗑️ Item removed from project:', {
+          projectId,
+          itemId,
+          totalItemsInProject: newSettlement.projects.find(p => p.id === projectId)?.items.length || 0
+        });
+        
+        // Trigger immediate save for critical operations
+        if (triggerImmediateSave) {
+          setTimeout(() => triggerImmediateSave!(newSettlement), 100);
         }
-      }));
+        
+        return { settlement: newSettlement };
+      });
     },
     
     generateTasksForProject: (items: ItemsData, projectId: string) => {
@@ -242,49 +329,100 @@ export const useSettlementStore = create<SettlementStore>()(
         dateCreated: new Date()
       }));
       
-      set((state) => ({
-        settlement: {
+      set((state) => {
+        const newSettlement = {
           ...state.settlement,
           tasks: [...existingTasks, ...tasks]
+        };
+        
+        // Trigger immediate save for critical operations
+        if (triggerImmediateSave) {
+          setTimeout(() => triggerImmediateSave!(newSettlement), 100);
         }
-      }));
+        
+        return { settlement: newSettlement };
+      });
       
       // Reserve materials for this project
       get().reserveMaterialsForProject(items, projectId);
     },
     
     updateProject: (projectId: string, updates: Partial<Project>) => {
-      set((state) => ({
-        settlement: {
+      set((state) => {
+        const newSettlement = {
           ...state.settlement,
           projects: state.settlement.projects.map(project =>
             project.id === projectId ? { ...project, ...updates } : project
           )
+        };
+        
+        // Trigger immediate save for critical operations
+        if (triggerImmediateSave) {
+          setTimeout(() => triggerImmediateSave!(newSettlement), 100);
         }
-      }));
+        
+        return { settlement: newSettlement };
+      });
     },
     
     deleteProject: (projectId: string) => {
-      set((state) => ({
-        settlement: {
+      const currentState = get();
+      const projectToDelete = currentState.settlement.projects.find(p => p.id === projectId);
+      
+      projectLogger.logProjectDelete(
+        'useSettlementStore.deleteProject',
+        projectId,
+        projectToDelete?.name
+      );
+      
+      set((state) => {
+        const newSettlement = {
           ...state.settlement,
           projects: state.settlement.projects.filter(p => p.id !== projectId),
           tasks: state.settlement.tasks.filter(t => t.projectId !== projectId)
+        };
+        
+        projectLogger.logStateChange(
+          'useSettlementStore.deleteProject',
+          'PROJECT_DELETED_FROM_SETTLEMENT',
+          newSettlement
+        );
+        
+        // Trigger immediate save for critical operations
+        if (triggerImmediateSave) {
+          setTimeout(() => {
+            projectLogger.logAutoSave(
+              'useSettlementStore.deleteProject',
+              'IMMEDIATE_SAVE_TRIGGERED',
+              'Project deletion',
+              { projectCount: newSettlement.projects.length }
+            );
+            triggerImmediateSave!(newSettlement);
+          }, 100);
         }
-      }));
+        
+        return { settlement: newSettlement };
+      });
     },
     
     assignPlayersToProject: (projectId: string, playerIds: string[]) => {
-      set((state) => ({
-        settlement: {
+      set((state) => {
+        const newSettlement = {
           ...state.settlement,
           projects: state.settlement.projects.map(project =>
             project.id === projectId 
               ? { ...project, assignedPlayers: playerIds }
               : project
           )
+        };
+        
+        // Trigger immediate save for critical operations
+        if (triggerImmediateSave) {
+          setTimeout(() => triggerImmediateSave!(newSettlement), 100);
         }
-      }));
+        
+        return { settlement: newSettlement };
+      });
     },
     
     getProjectProgress: (projectId: string) => {
@@ -296,45 +434,113 @@ export const useSettlementStore = create<SettlementStore>()(
     
     // Task management
     updateTask: (taskId: string, updates: Partial<Task>) => {
-      set((state) => ({
-        settlement: {
+      set((state) => {
+        const task = state.settlement.tasks.find(t => t.id === taskId);
+        if (!task) {
+          console.error('❌ Task not found:', taskId);
+          return state;
+        }
+        
+        const newSettlement = {
           ...state.settlement,
           tasks: state.settlement.tasks.map(task =>
             task.id === taskId ? { ...task, ...updates } : task
           )
+        };
+        
+        console.log('📝 Task updated:', {
+          taskId,
+          updates,
+          taskName: task.itemName
+        });
+        
+        // Trigger immediate save for critical operations
+        if (triggerImmediateSave) {
+          setTimeout(() => triggerImmediateSave!(newSettlement), 100);
         }
-      }));
+        
+        return { settlement: newSettlement };
+      });
     },
     
     assignTaskToPlayer: (taskId: string, playerId: string) => {
-      set((state) => ({
-        settlement: {
+      set((state) => {
+        const task = state.settlement.tasks.find(t => t.id === taskId);
+        if (!task) {
+          console.error('❌ Task not found for assignment:', taskId);
+          return state;
+        }
+        
+        const player = state.settlement.players.find(p => p.id === playerId);
+        const playerName = player?.name || playerId;
+        
+        const newSettlement = {
           ...state.settlement,
           tasks: state.settlement.tasks.map(task =>
             task.id === taskId 
-              ? { ...task, assignedPlayerId: playerId, status: 'in_progress' }
+              ? { ...task, assignedPlayerId: playerId, status: 'in_progress' as const, dateAssigned: new Date() }
               : task
           )
+        };
+        
+        console.log('👤 Task assigned to player:', {
+          taskId,
+          taskName: task.itemName,
+          playerId,
+          playerName,
+          status: 'in_progress'
+        });
+        
+        // Trigger immediate save for critical operations
+        if (triggerImmediateSave) {
+          setTimeout(() => triggerImmediateSave!(newSettlement), 100);
         }
-      }));
+        
+        return { settlement: newSettlement };
+      });
     },
     
     completeTask: (taskId: string, completedQuantity: number) => {
-      set((state) => ({
-        settlement: {
+      set((state) => {
+        const task = state.settlement.tasks.find(t => t.id === taskId);
+        if (!task) {
+          console.error('❌ Task not found for completion:', taskId);
+          return state;
+        }
+        
+        const finalQuantity = Math.min(completedQuantity, task.targetQuantity);
+        const isCompleted = finalQuantity >= task.targetQuantity;
+        
+        const newSettlement = {
           ...state.settlement,
           tasks: state.settlement.tasks.map(task =>
             task.id === taskId 
               ? { 
                   ...task, 
-                  completedQuantity: Math.min(completedQuantity, task.targetQuantity),
-                  status: completedQuantity >= task.targetQuantity ? 'completed' : task.status,
-                  dateCompleted: completedQuantity >= task.targetQuantity ? new Date() : task.dateCompleted
+                  completedQuantity: finalQuantity,
+                  status: isCompleted ? 'completed' as const : task.status,
+                  dateCompleted: isCompleted ? new Date() : task.dateCompleted
                 }
               : task
           )
+        };
+        
+        console.log('✅ Task progress updated:', {
+          taskId,
+          taskName: task.itemName,
+          completedQuantity: finalQuantity,
+          targetQuantity: task.targetQuantity,
+          status: isCompleted ? 'completed' : task.status,
+          isCompleted
+        });
+        
+        // Trigger immediate save for critical operations
+        if (triggerImmediateSave) {
+          setTimeout(() => triggerImmediateSave!(newSettlement), 100);
         }
-      }));
+        
+        return { settlement: newSettlement };
+      });
     },
     
     getAvailableTasks: () => {
@@ -523,6 +729,162 @@ export const useSettlementStore = create<SettlementStore>()(
     // Reset function
     resetSettlement: () => {
       set({ settlement: createInitialSettlement() });
+    },
+
+    // Load settlement data from Firebase
+    loadSettlement: (settlementData: SettlementData) => {
+      set({ settlement: settlementData });
+    },
+
+    // Set settlement data (for Firebase loading)
+    setSettlement: (settlementData: SettlementData | null, options?: { force?: boolean }) => {
+      projectLogger.logStateChange(
+        'useSettlementStore.setSettlement',
+        'SET_SETTLEMENT_CALLED',
+        settlementData
+      );
+      
+      console.log('🔍 setSettlement called with:', {
+        hasData: !!settlementData,
+        projectCount: settlementData?.projects?.length || 0,
+        settlementName: settlementData?.name,
+        projects: settlementData?.projects?.map(p => ({ id: p.id, name: p.name })) || []
+      });
+      
+      // Get current state for comparison
+      const currentState = get();
+      const currentProjects = currentState.settlement?.projects || [];
+      
+      // CRITICAL SAFETY CHECK: Prevent accidental data loss
+      if (!settlementData && currentProjects.length > 0 && !options?.force) {
+        console.error('🚨🚨🚨 CRITICAL SAFETY CHECK ACTIVATED! 🚨🚨🚨');
+        console.error('🛡️ Prevented project data loss!');
+        console.error('📊 Projects that would have been lost:', currentProjects.map(p => ({ id: p.id, name: p.name })));
+        console.error('💡 To override this safety check, use setSettlement(null, { force: true })');
+        console.error('📱 For emergency recovery, open Debug tab and use Emergency Recovery');
+        
+        // Log the stack trace to see what called this
+        console.error('📍 Call stack:', new Error().stack);
+        
+        // Show user notification if possible
+        if (typeof window !== 'undefined') {
+          setTimeout(() => {
+            alert(`🛡️ DATA PROTECTION: Prevented loss of ${currentProjects.length} project(s). Your data is safe!\n\nIf you're experiencing sync issues, go to Debug tab → Emergency Recovery.`);
+          }, 100);
+        }
+        
+        projectLogger.logError(
+          'useSettlementStore.setSettlement',
+          'SAFETY_CHECK_PREVENTED_DATA_LOSS',
+          {
+            protectedProjects: currentProjects.map(p => ({ id: p.id, name: p.name })),
+            currentCount: currentProjects.length,
+            attemptedToSetNull: true,
+            forceOption: options?.force || false,
+            timestamp: new Date().toISOString(),
+            location: 'SAFETY_CHECK_BARRIER'
+          }
+        );
+        
+        // Don't proceed with setting to null - keep existing data
+        console.log('🛡️ SAFETY BARRIER: Keeping existing settlement to prevent data loss');
+        return;
+      }
+      
+      // Log when force option is used
+      if (!settlementData && options?.force && currentProjects.length > 0) {
+        console.log('⚠️ FORCE OPTION: Clearing settlement despite existing projects:', currentProjects.length);
+        projectLogger.logStateChange(
+          'useSettlementStore.setSettlement',
+          'FORCE_CLEAR_SETTLEMENT',
+          settlementData
+        );
+      }
+      
+      if (settlementData) {
+        const newProjects = settlementData.projects || [];
+        
+        // Check for lost projects
+        const lostProjects = currentProjects.filter(current => 
+          !newProjects.some(newP => newP.id === current.id)
+        );
+        
+        const gainedProjects = newProjects.filter(newP => 
+          !currentProjects.some(current => current.id === newP.id)
+        );
+        
+        if (lostProjects.length > 0) {
+          projectLogger.logError(
+            'useSettlementStore.setSettlement',
+            'PROJECTS_LOST_DURING_SET_SETTLEMENT',
+            {
+              lostProjects: lostProjects.map(p => ({ id: p.id, name: p.name })),
+              previousCount: currentProjects.length,
+              newCount: newProjects.length,
+              currentProjects: currentProjects.map(p => ({ id: p.id, name: p.name })),
+              newProjectsReceived: newProjects.map(p => ({ id: p.id, name: p.name }))
+            }
+          );
+          
+          console.error('🚨 PROJECTS LOST during setSettlement!', {
+            lostProjects: lostProjects.map(p => ({ id: p.id, name: p.name })),
+            previousCount: currentProjects.length,
+            newCount: newProjects.length,
+            stackTrace: new Error().stack
+          });
+        }
+        
+        if (gainedProjects.length > 0) {
+          projectLogger.logStateChange(
+            'useSettlementStore.setSettlement',
+            'PROJECTS_GAINED',
+            settlementData
+          );
+          
+          console.log('✅ New projects loaded:', {
+            gainedProjects: gainedProjects.map(p => ({ id: p.id, name: p.name })),
+            previousCount: currentProjects.length,
+            newCount: newProjects.length
+          });
+        }
+        
+        set({ settlement: settlementData });
+        
+        projectLogger.logStateChange(
+          'useSettlementStore.setSettlement',
+          'SETTLEMENT_SET_WITH_DATA',
+          settlementData
+        );
+        
+        console.log('✅ Settlement set with projects:', settlementData.projects?.length || 0);
+      } else {
+        if (currentProjects.length > 0) {
+          projectLogger.logError(
+            'useSettlementStore.setSettlement',
+            'PROJECTS_LOST_SETTLEMENT_SET_TO_NULL',
+            {
+              lostProjects: currentProjects.map(p => ({ id: p.id, name: p.name })),
+              previousCount: currentProjects.length
+            }
+          );
+          
+          console.error('🚨 PROJECTS LOST - settlement set to null!', {
+            lostProjects: currentProjects.map(p => ({ id: p.id, name: p.name })),
+            stackTrace: new Error().stack
+          });
+        }
+        
+        const initialSettlement = createInitialSettlement();
+        set({ settlement: initialSettlement });
+        
+        projectLogger.logStateChange(
+          'useSettlementStore.setSettlement',
+          'SETTLEMENT_SET_TO_INITIAL',
+          initialSettlement
+        );
+        
+        console.log('✅ Settlement set to initial state');
+      }
     },
 
     // New methods for inventory reservation

@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
 import { useSettlementStore } from '../state/useSettlementStore';
 import { useItemsStore } from '../state/useItemsStore';
+import { useAuth } from '../hooks/useAuth';
 import { Project } from '../types/Settlement';
 import { calculateMaterials } from '../utils/calculator';
 import { getProjectMaterials } from '../utils/settlementIntegration';
+import { EnhancedFirebaseService } from '../services/enhancedFirebaseService';
+
+const enhancedFirebaseService = new EnhancedFirebaseService();
 
 const ProjectManagement: React.FC = () => {
   const { 
@@ -22,17 +26,38 @@ const ProjectManagement: React.FC = () => {
   } = useSettlementStore();
   
   const { items } = useItemsStore();
+  const { user } = useAuth();
   
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showAddItemForm, setShowAddItemForm] = useState<string | null>(null);
+  const [showShareDialog, setShowShareDialog] = useState<string | null>(null);
+  const [showCollaborationDialog, setShowCollaborationDialog] = useState<string | null>(null);
+  const [showJoinCollaborationDialog, setShowJoinCollaborationDialog] = useState<boolean>(false);
+  const [collaborationCode, setCollaborationCode] = useState<string>('');
+  const [joinCode, setJoinCode] = useState<string>('');
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectDescription, setNewProjectDescription] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedItemId, setSelectedItemId] = useState('');
   const [selectedQuantity, setSelectedQuantity] = useState(1);
   const [selectedRecipeIndex, setSelectedRecipeIndex] = useState(0);
+  const [shareSettings, setShareSettings] = useState({
+    isPublic: true,
+    difficulty: 'intermediate' as 'beginner' | 'intermediate' | 'advanced',
+    estimatedTime: '',
+    requiredPlayers: 1,
+    tags: [] as string[]
+  });
+
+  // Debug logging
+  console.log('🔍 ProjectManagement render:', {
+    hasSettlement: !!settlement,
+    projectCount: settlement?.projects?.length || 0,
+    projects: settlement?.projects
+  });
 
   if (!settlement) {
+    console.log('❌ No settlement data available');
     return (
       <div className="bg-white rounded-xl p-6 shadow-lg border border-slate-200">
         <div className="text-center">
@@ -44,6 +69,8 @@ const ProjectManagement: React.FC = () => {
 
   const projects = settlement.projects;
   const players = settlement.players;
+  
+  console.log('✅ Settlement loaded, projects:', projects.length);
 
   const handleCreateProject = () => {
     if (newProjectName.trim()) {
@@ -51,6 +78,111 @@ const ProjectManagement: React.FC = () => {
       setNewProjectName('');
       setNewProjectDescription('');
       setShowCreateForm(false);
+    }
+  };
+
+  const handleShareProject = async (projectId: string) => {
+    if (!user) return;
+    
+    const project = projects.find(p => p.id === projectId);
+    if (!project) return;
+
+    try {
+      const materials = getProjectMaterials(items, projectId);
+      
+      await enhancedFirebaseService.createSharedProject({
+        name: project.name,
+        description: project.description || '',
+        items: project.items,
+        authorId: user.uid,
+        authorName: user.displayName || user.email || 'Unknown User',
+        authorEmail: user.email || '',
+        isPublic: shareSettings.isPublic,
+        tags: shareSettings.tags,
+        difficulty: shareSettings.difficulty,
+        estimatedTime: shareSettings.estimatedTime,
+        requiredPlayers: shareSettings.requiredPlayers,
+        totalMaterials: materials.map(m => ({
+          itemId: m.itemId,
+          itemName: m.itemName,
+          quantity: m.quantity
+        }))
+      });
+
+      setShowShareDialog(null);
+      alert('✅ Project shared successfully!');
+    } catch (error) {
+      console.error('Error sharing project:', error);
+      alert('❌ Failed to share project');
+    }
+  };
+
+  const handleCreateCollaboration = async (projectId: string) => {
+    if (!user) return;
+    
+    const project = projects.find(p => p.id === projectId);
+    if (!project) return;
+
+    try {
+      // First, check if there's already a collaboration for this project
+      const existingCollaborations = await enhancedFirebaseService.getProjectCollaborations(user.uid);
+      const existingCollaboration = existingCollaborations.find(c => c.projectId === projectId && c.ownerId === user.uid);
+      
+      if (existingCollaboration) {
+        // Show existing collaboration
+        setCollaborationCode(existingCollaboration.inviteCode || '');
+        setShowCollaborationDialog(projectId);
+        return;
+      }
+
+      // Create new collaboration
+      const collaborationId = await enhancedFirebaseService.createProjectCollaboration({
+        projectId,
+        projectName: project.name,
+        ownerId: user.uid,
+        ownerName: user.displayName || user.email || 'Unknown User',
+        collaborators: [user.uid],
+        collaboratorNames: [user.displayName || user.email || 'Unknown User'],
+        permissions: {
+          [user.uid]: 'admin'
+        },
+        isActive: true
+      });
+
+      // Get the new collaboration to show the invite code
+      const collaboration = await enhancedFirebaseService.getProjectCollaborations(user.uid);
+      const newCollaboration = collaboration.find(c => c.id === collaborationId);
+      
+      if (newCollaboration) {
+        setCollaborationCode(newCollaboration.inviteCode || '');
+        setShowCollaborationDialog(projectId);
+      }
+    } catch (error) {
+      console.error('Error creating collaboration:', error);
+      alert('❌ Failed to create collaboration');
+    }
+  };
+
+  const handleJoinCollaboration = async () => {
+    if (!user || !joinCode.trim()) return;
+
+    try {
+      const collaborationId = await enhancedFirebaseService.joinProjectCollaboration(
+        joinCode.trim().toUpperCase(),
+        user.uid,
+        user.displayName || user.email || 'Unknown User'
+      );
+
+      if (collaborationId) {
+        setJoinCode('');
+        setShowJoinCollaborationDialog(false);
+        alert('✅ Successfully joined collaboration!');
+      } else {
+        alert('❌ Invalid invite code. Please check the code and try again.');
+      }
+    } catch (error) {
+      console.error('Error joining collaboration:', error);
+      alert('❌ Failed to join collaboration');
     }
   };
 
@@ -128,12 +260,20 @@ const ProjectManagement: React.FC = () => {
       <div className="bg-white rounded-xl p-6 shadow-lg border border-slate-200">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold text-slate-800">Project Management</h2>
-          <button
-            onClick={() => setShowCreateForm(!showCreateForm)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            {showCreateForm ? 'Cancel' : 'Create Project'}
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowJoinCollaborationDialog(true)}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+            >
+              🤝 Join Collaboration
+            </button>
+            <button
+              onClick={() => setShowCreateForm(!showCreateForm)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              {showCreateForm ? 'Cancel' : 'Create Project'}
+            </button>
+          </div>
         </div>
 
         {showCreateForm && (
@@ -556,18 +696,38 @@ const ProjectManagement: React.FC = () => {
                         <option value="completed">Completed</option>
                       </select>
                     </div>
-                    <button
-                      onClick={() => {
-                        if (window.confirm('Are you sure you want to delete this project and all its tasks?')) {
-                          // Release reserved materials before deleting
-                          releaseMaterialsForProject(items, project.id);
-                          deleteProject(project.id);
-                        }
-                      }}
-                      className="text-red-600 hover:text-red-800 px-2 py-1 text-sm"
-                    >
-                      Delete
-                    </button>
+                    <div className="flex space-x-2">
+                      {user && (
+                        <>
+                          <button
+                            onClick={() => setShowShareDialog(project.id)}
+                            className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm"
+                            title="Share project publicly"
+                          >
+                            🌐 Share
+                          </button>
+                          <button
+                            onClick={() => handleCreateCollaboration(project.id)}
+                            className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm"
+                            title="Create collaboration"
+                          >
+                            🤝 Collaborate
+                          </button>
+                        </>
+                      )}
+                      <button
+                        onClick={() => {
+                          if (window.confirm('Are you sure you want to delete this project and all its tasks?')) {
+                            // Release reserved materials before deleting
+                            releaseMaterialsForProject(items, project.id);
+                            deleteProject(project.id);
+                          }
+                        }}
+                        className="text-red-600 hover:text-red-800 px-2 py-1 text-sm"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </div>
                 </div>
               );
@@ -575,6 +735,259 @@ const ProjectManagement: React.FC = () => {
           </div>
         )}
       </div>
+      
+      {/* Share Dialog */}
+      {showShareDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold text-slate-800">Share Project</h3>
+              <button
+                onClick={() => setShowShareDialog(null)}
+                className="text-gray-500 hover:text-gray-700 text-xl"
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Visibility
+                </label>
+                <div className="space-y-2">
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      checked={shareSettings.isPublic}
+                      onChange={(e) => setShareSettings({...shareSettings, isPublic: true})}
+                      className="mr-2"
+                    />
+                    <span className="text-sm">🌐 Public - Anyone can view</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      checked={!shareSettings.isPublic}
+                      onChange={(e) => setShareSettings({...shareSettings, isPublic: false})}
+                      className="mr-2"
+                    />
+                    <span className="text-sm">🔒 Private - Only you can view</span>
+                  </label>
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Difficulty Level
+                </label>
+                <select
+                  value={shareSettings.difficulty}
+                  onChange={(e) => setShareSettings({...shareSettings, difficulty: e.target.value as any})}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="beginner">🟢 Beginner</option>
+                  <option value="intermediate">🟡 Intermediate</option>
+                  <option value="advanced">🔴 Advanced</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Estimated Time
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g., 2 hours, 1 day"
+                  value={shareSettings.estimatedTime}
+                  onChange={(e) => setShareSettings({...shareSettings, estimatedTime: e.target.value})}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Required Players
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={shareSettings.requiredPlayers}
+                  onChange={(e) => setShareSettings({...shareSettings, requiredPlayers: parseInt(e.target.value) || 1})}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Tags (comma separated)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g., weapons, building, advanced"
+                  value={shareSettings.tags.join(', ')}
+                  onChange={(e) => setShareSettings({...shareSettings, tags: e.target.value.split(',').map(t => t.trim()).filter(t => t)})}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+            </div>
+            
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => showShareDialog && handleShareProject(showShareDialog)}
+                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              >
+                Share Project
+              </button>
+              <button
+                onClick={() => setShowShareDialog(null)}
+                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Collaboration Dialog */}
+      {showCollaborationDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold text-slate-800">🤝 Collaboration Created!</h3>
+              <button
+                onClick={() => setShowCollaborationDialog(null)}
+                className="text-gray-500 hover:text-gray-700 text-xl"
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="font-semibold text-blue-800 mb-2">📋 Your Invite Code</h4>
+                <div className="flex items-center gap-2 bg-white border border-blue-300 rounded-lg p-3">
+                  <code className="flex-1 text-lg font-mono text-blue-900 bg-blue-50 px-2 py-1 rounded">
+                    {collaborationCode}
+                  </code>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(collaborationCode);
+                      alert('📋 Code copied to clipboard!');
+                    }}
+                    className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm"
+                    title="Copy to clipboard"
+                  >
+                    📋 Copy
+                  </button>
+                </div>
+              </div>
+              
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <h4 className="font-semibold text-green-800 mb-2">🎯 How to Use</h4>
+                <ol className="text-sm text-green-700 space-y-1">
+                  <li>1. <strong>Copy</strong> the invite code above</li>
+                  <li>2. <strong>Share</strong> it with your team members</li>
+                  <li>3. They can <strong>join</strong> by entering the code</li>
+                  <li>4. <strong>Collaborate</strong> on the project together!</li>
+                </ol>
+              </div>
+              
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                <p className="text-sm text-yellow-800">
+                  <strong>💡 Note:</strong> This code is permanent and won't change. You can share it anytime to add new collaborators.
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(collaborationCode);
+                  alert('📋 Code copied to clipboard!');
+                }}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                📋 Copy Code
+              </button>
+              <button
+                onClick={() => setShowCollaborationDialog(null)}
+                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+              >
+                Done
+              </button>
+                         </div>
+           </div>
+         </div>
+       )}
+
+      {/* Join Collaboration Dialog */}
+      {showJoinCollaborationDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold text-slate-800">🤝 Join Collaboration</h3>
+              <button
+                onClick={() => setShowJoinCollaborationDialog(false)}
+                className="text-gray-500 hover:text-gray-700 text-xl"
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="font-semibold text-blue-800 mb-2">📋 Enter Invite Code</h4>
+                <input
+                  type="text"
+                  placeholder="Enter the invite code here..."
+                  value={joinCode}
+                  onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                  className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center font-mono text-lg"
+                  maxLength={10}
+                />
+              </div>
+              
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <h4 className="font-semibold text-green-800 mb-2">🎯 How to Join</h4>
+                <ol className="text-sm text-green-700 space-y-1">
+                  <li>1. <strong>Get</strong> the invite code from the project owner</li>
+                  <li>2. <strong>Enter</strong> the code in the field above</li>
+                  <li>3. <strong>Click</strong> "Join Collaboration"</li>
+                  <li>4. <strong>Start</strong> collaborating on the project!</li>
+                </ol>
+              </div>
+              
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                <p className="text-sm text-yellow-800">
+                  <strong>💡 Note:</strong> The invite code is usually 8-10 characters long and contains letters and numbers.
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={handleJoinCollaboration}
+                disabled={!joinCode.trim()}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+              >
+                🤝 Join Collaboration
+              </button>
+              <button
+                onClick={() => {
+                  setShowJoinCollaborationDialog(false);
+                  setJoinCode('');
+                }}
+                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

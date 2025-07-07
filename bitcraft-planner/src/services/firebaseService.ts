@@ -10,6 +10,7 @@ import {
 import { db } from '../firebase/config';
 import { Inventory, BuildListItem } from '../state/useItemsStore';
 import { SettlementData } from '../types/Settlement';
+import { projectLogger } from '../utils/projectLogger';
 
 export interface UserData {
   inventory: Inventory;
@@ -17,6 +18,17 @@ export interface UserData {
   settlement: SettlementData | null;
   lastUpdated: any; // Firestore timestamp
   version: number; // For data versioning
+  
+  // User profile information (optional for backwards compatibility)
+  userProfile?: {
+    email: string;
+    displayName?: string;
+    photoURL?: string;
+    emailVerified?: boolean;
+    providerId?: string;
+    createdAt?: any; // Firestore timestamp
+    lastSignIn?: any; // Firestore timestamp
+  };
 }
 
 export interface SaveStatus {
@@ -45,6 +57,7 @@ export class FirebaseService {
     error: null
   };
   private isDatabaseEnabled: boolean | null = null; // Cache database status
+  private pendingSaves: Map<string, Promise<void>> = new Map(); // Prevent concurrent saves per user
 
   // Subscribe to save status changes
   subscribeToSaveStatus(callback: (status: SaveStatus) => void) {
@@ -67,6 +80,24 @@ export class FirebaseService {
     return doc(db, 'users', userId);
   }
 
+  // Helper method to get all nested keys from an object
+  private getAllNestedKeys(obj: any, prefix = ''): string[] {
+    const keys: string[] = [];
+    
+    if (obj && typeof obj === 'object') {
+      for (const key in obj) {
+        const fullKey = prefix ? `${prefix}.${key}` : key;
+        keys.push(fullKey);
+        
+        if (typeof obj[key] === 'object' && obj[key] !== null && !Array.isArray(obj[key])) {
+          keys.push(...this.getAllNestedKeys(obj[key], fullKey));
+        }
+      }
+    }
+    
+    return keys;
+  }
+
   private validateUserData(data: Partial<UserData>): boolean {
     // Basic validation
     if (data.inventory && typeof data.inventory !== 'object') {
@@ -82,30 +113,85 @@ export class FirebaseService {
   }
 
   // Clean data by removing undefined values (Firestore doesn't support undefined)
-  private cleanDataForFirestore(obj: any): any {
-    if (obj === null || obj === undefined) {
-      return null;
+  private cleanDataForFirestore(data: any): any {
+    if (data === null) return data;
+    if (data === undefined) return null; // Convert undefined to null for Firestore
+    
+    if (data instanceof Date) {
+      return data; // Firestore handles Date objects automatically
     }
     
-    if (Array.isArray(obj)) {
-      return obj.map(item => this.cleanDataForFirestore(item));
+    if (Array.isArray(data)) {
+      return data.map(item => this.cleanDataForFirestore(item));
     }
     
-    if (obj instanceof Date) {
-      return obj;
-    }
-    
-    if (typeof obj === 'object') {
+    if (typeof data === 'object') {
       const cleaned: any = {};
-      for (const [key, value] of Object.entries(obj)) {
-        if (value !== undefined) {
-          cleaned[key] = this.cleanDataForFirestore(value);
+      for (const [key, value] of Object.entries(data)) {
+        // Skip undefined values entirely
+        if (value === undefined) {
+          continue;
+        }
+        
+        // Debug: Log projects array specifically
+        if (key === 'projects' && Array.isArray(value)) {
+          console.log('🔍 Cleaning projects array:', {
+            originalLength: value.length,
+            originalProjects: value.map((p: any) => ({ name: p.name, id: p.id }))
+          });
+        }
+        
+        // Handle date fields in settlement data
+        if ((key === 'dateCreated' || key === 'dateAdded' || key === 'dateCompleted' || key === 'lastUpdated') && value instanceof Date) {
+          cleaned[key] = value; // Firestore will convert to Timestamp
+        } else {
+          const cleanedValue = this.cleanDataForFirestore(value);
+          // Only add the key if the cleaned value is not undefined
+          if (cleanedValue !== undefined) {
+            cleaned[key] = cleanedValue;
+            
+            // Debug: Log cleaned projects array
+            if (key === 'projects' && Array.isArray(cleanedValue)) {
+              console.log('🔍 Cleaned projects array:', {
+                cleanedLength: cleanedValue.length,
+                cleanedProjects: cleanedValue.map((p: any) => ({ name: p.name, id: p.id }))
+              });
+            }
+          }
         }
       }
       return cleaned;
     }
     
-    return obj;
+    return data;
+  }
+
+  // Convert Firestore timestamps back to Date objects
+  private convertTimestampsToDate(data: any): any {
+    if (data === null || data === undefined) return data;
+    
+    if (data instanceof Timestamp) {
+      return data.toDate();
+    }
+    
+    if (Array.isArray(data)) {
+      return data.map(item => this.convertTimestampsToDate(item));
+    }
+    
+    if (typeof data === 'object') {
+      const converted: any = {};
+      for (const [key, value] of Object.entries(data)) {
+        // Handle date fields in settlement data
+        if ((key === 'dateCreated' || key === 'dateAdded' || key === 'dateCompleted' || key === 'lastUpdated') && value instanceof Timestamp) {
+          converted[key] = value.toDate();
+        } else {
+          converted[key] = this.convertTimestampsToDate(value);
+        }
+      }
+      return converted;
+    }
+    
+    return data;
   }
 
   // Check if database is available
@@ -140,10 +226,33 @@ export class FirebaseService {
       throw new Error('Invalid user data format');
     }
 
+    projectLogger.logDataSave(
+      'FirebaseService.saveUserData',
+      'SAVE_USER_DATA_START',
+      data
+    );
+
+    // Prevent concurrent saves for the same user
+    const existingSave = this.pendingSaves.get(userId);
+    if (existingSave) {
+      console.log('⏳ Save already in progress for user, waiting for completion...');
+      projectLogger.logAutoSave(
+        'FirebaseService.saveUserData',
+        'CONCURRENT_SAVE_WAIT',
+        'Save already in progress, waiting for completion'
+      );
+      await existingSave;
+    }
+
     // Check database availability first
     const isAvailable = await this.checkDatabaseAvailability();
     if (!isAvailable) {
       console.log('📴 Database not available, skipping save');
+      projectLogger.logError(
+        'FirebaseService.saveUserData',
+        'DATABASE_NOT_AVAILABLE',
+        { userId }
+      );
       this.updateSaveStatus({ 
         isSaving: false, 
         error: 'Database not available - data saved locally only' 
@@ -155,29 +264,70 @@ export class FirebaseService {
 
     const userDocRef = this.getUserDocRef(userId);
     const cleanedData = this.cleanDataForFirestore(data);
+    
+    // Debug: Log what we're about to save
+    if (cleanedData.settlement) {
+      console.log('🔍 Cleaned settlement data:', {
+        hasProjects: !!cleanedData.settlement.projects,
+        projectCount: cleanedData.settlement.projects?.length || 0,
+        projectNames: cleanedData.settlement.projects?.map((p: any) => p.name) || []
+      });
+    }
+    
     const dataToSave = {
       ...cleanedData,
       lastUpdated: serverTimestamp(),
       version: (data.version || 0) + 1
     };
     
-    try {
-      await withTimeout(setDoc(userDocRef, dataToSave, { merge: true }), 10000);
-      this.updateSaveStatus({ 
-        isSaving: false, 
-        lastSaved: new Date(),
-        error: null 
-      });
-      console.log('✅ User data saved successfully');
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to save data';
-      this.updateSaveStatus({ 
-        isSaving: false, 
-        error: errorMessage.includes('timeout') ? 'Save timeout - please check connection' : errorMessage
-      });
-      console.error('❌ Error saving user data:', error);
-      throw error;
-    }
+    projectLogger.logDataSave(
+      'FirebaseService.saveUserData',
+      'SAVE_USER_DATA_FIRESTORE',
+      dataToSave
+    );
+    
+    // Create save promise and track it
+    const savePromise = (async () => {
+      try {
+        await withTimeout(setDoc(userDocRef, dataToSave, { merge: true }), 10000);
+        this.updateSaveStatus({ 
+          isSaving: false, 
+          lastSaved: new Date(),
+          error: null 
+        });
+        console.log('✅ User data saved successfully');
+        
+        projectLogger.logDataSave(
+          'FirebaseService.saveUserData',
+          'SAVE_USER_DATA_SUCCESS',
+          dataToSave
+        );
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Failed to save data';
+        this.updateSaveStatus({ 
+          isSaving: false, 
+          error: errorMessage.includes('timeout') ? 'Save timeout - please check connection' : errorMessage
+        });
+        console.error('❌ Error saving user data:', error);
+        
+        projectLogger.logError(
+          'FirebaseService.saveUserData',
+          'SAVE_USER_DATA_ERROR',
+          { error: error instanceof Error ? error.message : String(error), userId }
+        );
+        
+        throw error;
+      } finally {
+        // Remove from pending saves
+        this.pendingSaves.delete(userId);
+      }
+    })();
+    
+    // Track this save operation
+    this.pendingSaves.set(userId, savePromise);
+    
+    // Wait for completion
+    await savePromise;
   }
 
   async loadUserData(userId: string): Promise<UserData | null> {
@@ -201,13 +351,50 @@ export class FirebaseService {
       
       if (docSnap.exists()) {
         const data = docSnap.data() as UserData;
+        
+        // Debug: Log what we're loading from Firebase with deep inspection
+        console.log('🔍 Raw data from Firebase:', {
+          hasSettlement: !!data.settlement,
+          settlementProjects: data.settlement?.projects?.length || 0,
+          settlementData: data.settlement,
+          dataKeys: Object.keys(data),
+          settlementKeys: data.settlement ? Object.keys(data.settlement) : 'No settlement'
+        });
+        
+        // Debug: Check for nested settlement.projects field vs settlement object
+        const dataAny = data as any;
+        if (dataAny['settlement.projects']) {
+          console.log('🔍 Found nested settlement.projects field:', dataAny['settlement.projects']);
+        }
+        
+        // Debug: Check all data fields for project-related keys
+        const allKeys = this.getAllNestedKeys(data);
+        const projectRelatedKeys = allKeys.filter(key => key.includes('project'));
+        if (projectRelatedKeys.length > 0) {
+          console.log('🔍 Found project-related keys in data:', projectRelatedKeys);
+        }
+        
+        // Debug: Log the actual projects array
+        if (data.settlement?.projects) {
+          console.log('🔍 Projects in Firebase settlement object:', data.settlement.projects.map((p: any) => ({ name: p.name, id: p.id })));
+        } else {
+          console.log('❌ No projects array in Firebase settlement object');
+        }
+        
         const userData = {
           inventory: data.inventory || {},
           buildList: data.buildList || [],
-          settlement: data.settlement || null,
+          settlement: data.settlement ? this.convertTimestampsToDate(data.settlement) : null,
           lastUpdated: data.lastUpdated,
-          version: data.version || 1
+          version: data.version || 1,
+          userProfile: data.userProfile || undefined
         };
+        
+        // Debug: Log what we're returning
+        console.log('🔍 Processed user data:', {
+          hasSettlement: !!userData.settlement,
+          settlementProjects: userData.settlement?.projects?.length || 0
+        });
         
         this.updateSaveStatus({ 
           isLoading: false, 
@@ -246,7 +433,11 @@ export class FirebaseService {
   }
 
   async saveSettlement(userId: string, settlement: SettlementData): Promise<void> {
-    console.log('💾 Saving settlement data...');
+    console.log('💾 Saving settlement data...', {
+      hasData: !!settlement,
+      projectCount: settlement.projects?.length || 0,
+      projects: settlement.projects?.map(p => ({ name: p.name, id: p.id })) || []
+    });
     return this.saveUserData(userId, { settlement });
   }
 
@@ -257,6 +448,12 @@ export class FirebaseService {
       dataToSave.settlement = settlement;
     }
     return this.saveUserData(userId, dataToSave);
+  }
+
+  // Save user profile information
+  async saveUserProfile(userId: string, profileData: UserData['userProfile']): Promise<void> {
+    console.log('👤 Saving user profile...');
+    return this.saveUserData(userId, { userProfile: profileData });
   }
 
   // Real-time listener for user data
@@ -270,9 +467,10 @@ export class FirebaseService {
           callback({
             inventory: data.inventory || {},
             buildList: data.buildList || [],
-            settlement: data.settlement || null,
+            settlement: data.settlement ? this.convertTimestampsToDate(data.settlement) : null,
             lastUpdated: data.lastUpdated,
-            version: data.version || 1
+            version: data.version || 1,
+            userProfile: data.userProfile || undefined
           });
         } else {
           callback(null);
