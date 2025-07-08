@@ -270,7 +270,7 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
     if (!currentSettlement || !user) return;
     
     try {
-      const linkId = await settlementService.createSettlementInviteLink({
+      const inviteCode = await settlementService.createSettlementInviteLink({
         settlementId: currentSettlement.id,
         createdBy: user.uid,
         role: inviteRole,
@@ -279,10 +279,8 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
         maxUses: 10 // Default max uses
       });
       
-      // Get the invite link to show the code
-      const links = await settlementService.getSettlementInviteLink('');
-      // Note: This is simplified - in reality we'd need to get the specific link
-      setGeneratedInviteCode('SAMPLE_CODE_' + linkId.substring(0, 8).toUpperCase());
+      // Set the real invite code returned from the service
+      setGeneratedInviteCode(inviteCode);
       
     } catch (err) {
       console.error('Error generating invite link:', err);

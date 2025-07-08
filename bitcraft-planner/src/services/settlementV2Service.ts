@@ -469,7 +469,7 @@ export class SettlementV2Service {
       createdAt: serverTimestamp()
     });
     
-    return inviteRef.id;
+    return inviteCode; // Return the actual invite code, not the document ID
   }
 
   async getSettlementInviteLink(inviteCode: string): Promise<SettlementInviteLink | null> {
