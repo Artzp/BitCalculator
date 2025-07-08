@@ -271,6 +271,99 @@ export interface CollaborationActivity {
 }
 
 // ============================================================================
+// SETTLEMENT COLLABORATION
+// ============================================================================
+
+export interface SettlementCollaboration {
+  id: string;
+  
+  // Relationships
+  settlementId: string; // FK to Settlement
+  userId: string; // FK to User
+  invitedBy: string; // FK to User
+  
+  // Collaboration data
+  role: SettlementCollaboratorRole;
+  status: CollaborationStatus;
+  permissions: SettlementCollaborationPermissions;
+  
+  // Dates
+  invitedAt: Date;
+  acceptedAt?: Date;
+  lastActiveAt?: Date;
+  removedAt?: Date;
+  
+  // Invitation data
+  inviteCode?: string;
+  inviteMessage?: string;
+  
+  // Metadata
+  metadata: {
+    removalReason?: string;
+    activityLog: CollaborationActivity[];
+    version: number;
+  };
+}
+
+export type SettlementCollaboratorRole = 'viewer' | 'contributor' | 'admin' | 'co_owner';
+
+export interface SettlementCollaborationPermissions {
+  // Project permissions
+  canViewProjects: boolean;
+  canCreateProjects: boolean;
+  canEditProjects: boolean;
+  canDeleteProjects: boolean;
+  
+  // Task permissions
+  canViewTasks: boolean;
+  canCreateTasks: boolean;
+  canEditTasks: boolean;
+  canDeleteTasks: boolean;
+  canAssignTasks: boolean;
+  
+  // Inventory permissions
+  canViewInventory: boolean;
+  canEditInventory: boolean;
+  canManageReservations: boolean;
+  
+  // Collaboration permissions
+  canInviteUsers: boolean;
+  canRemoveUsers: boolean;
+  canChangeRoles: boolean;
+  
+  // Settlement permissions
+  canEditSettings: boolean;
+  canDeleteSettlement: boolean;
+  canExportData: boolean;
+}
+
+export interface SettlementInviteLink {
+  id: string;
+  settlementId: string;
+  createdBy: string;
+  inviteCode: string;
+  role: SettlementCollaboratorRole;
+  permissions: SettlementCollaborationPermissions;
+  isActive: boolean;
+  expiresAt?: Date;
+  maxUses?: number;
+  currentUses: number;
+  createdAt: Date;
+  lastUsedAt?: Date;
+}
+
+export interface SettlementMember {
+  user: User;
+  collaboration: SettlementCollaboration;
+  isOwner: boolean;
+}
+
+export interface SettlementWithMembers extends Settlement {
+  members: SettlementMember[];
+  collaborationCount: number;
+}
+
+// ============================================================================
 // SHARED PROJECTS COLLECTION
 // ============================================================================
 

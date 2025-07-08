@@ -18,6 +18,8 @@ export const COLLECTION_NAMES = {
   
   // Relationship tables
   PROJECT_COLLABORATIONS: 'project_collaborations_v2',
+  SETTLEMENT_COLLABORATIONS: 'settlement_collaborations_v2',
+  SETTLEMENT_INVITE_LINKS: 'settlement_invite_links_v2',
   SHARED_PROJECTS: 'shared_projects_v2',
   BUILD_LISTS: 'build_lists_v2',
   

@@ -19,6 +19,7 @@ import {
   writeBatch
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
+import { SettlementCollaboration, SettlementCollaboratorRole, SettlementCollaborationPermissions, SettlementInviteLink, SettlementMember, User } from '../types/NormalizedDatabase';
 
 // New database structure interfaces
 export interface UserV2 {
@@ -157,6 +158,20 @@ export interface BuildListV2 {
 }
 
 export class SettlementV2Service {
+  // Helper function to safely convert timestamp to date
+  private safeToDate(timestamp: any): Date {
+    if (!timestamp) {
+      return new Date();
+    }
+    if (timestamp.toDate && typeof timestamp.toDate === 'function') {
+      return timestamp.toDate();
+    }
+    if (timestamp instanceof Date) {
+      return timestamp;
+    }
+    return new Date(timestamp);
+  }
+
   // User management
   async createUser(userId: string, userData: Omit<UserV2, 'id' | 'createdAt' | 'lastSignIn'>): Promise<void> {
     const userRef = doc(db, 'users', userId);
@@ -382,6 +397,289 @@ export class SettlementV2Service {
     
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ProjectCollaboratorV2));
+  }
+
+  // Settlement collaboration management
+  async createSettlementCollaboration(collaborationData: Omit<SettlementCollaboration, 'id' | 'invitedAt'>): Promise<string> {
+    const collaborationRef = collection(db, 'settlement_collaborations_v2');
+    const collabRef = await addDoc(collaborationRef, {
+      ...collaborationData,
+      invitedAt: serverTimestamp()
+    });
+    
+    return collabRef.id;
+  }
+
+  async getSettlementCollaborators(settlementId: string): Promise<SettlementCollaboration[]> {
+    const q = query(
+      collection(db, 'settlement_collaborations_v2'),
+      where('settlementId', '==', settlementId),
+      where('status', '==', 'active')
+    );
+    
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SettlementCollaboration));
+  }
+
+  async getSettlementCollaboration(userId: string, settlementId: string): Promise<SettlementCollaboration | null> {
+    const collaborationId = `${userId}_${settlementId}`;
+    const collabRef = doc(db, 'settlement_collaborations_v2', collaborationId);
+    const collabSnap = await getDoc(collabRef);
+    
+    if (collabSnap.exists()) {
+      return { id: collabSnap.id, ...collabSnap.data() } as SettlementCollaboration;
+    }
+    return null;
+  }
+
+  async updateSettlementCollaboration(collaborationId: string, updates: Partial<SettlementCollaboration>): Promise<void> {
+    const collabRef = doc(db, 'settlement_collaborations_v2', collaborationId);
+    await updateDoc(collabRef, {
+      ...updates,
+      lastActiveAt: serverTimestamp()
+    });
+  }
+
+  async removeSettlementCollaborator(userId: string, settlementId: string): Promise<void> {
+    const collaborationId = `${userId}_${settlementId}`;
+    const collabRef = doc(db, 'settlement_collaborations_v2', collaborationId);
+    await updateDoc(collabRef, {
+      status: 'removed',
+      removedAt: serverTimestamp()
+    });
+  }
+
+  async acceptSettlementInvitation(userId: string, settlementId: string): Promise<void> {
+    const collaborationId = `${userId}_${settlementId}`;
+    const collabRef = doc(db, 'settlement_collaborations_v2', collaborationId);
+    await updateDoc(collabRef, {
+      status: 'active',
+      acceptedAt: serverTimestamp(),
+      lastActiveAt: serverTimestamp()
+    });
+  }
+
+  async createSettlementInviteLink(linkData: Omit<SettlementInviteLink, 'id' | 'createdAt' | 'inviteCode' | 'currentUses'>): Promise<string> {
+    const inviteCode = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    const linkRef = collection(db, 'settlement_invite_links_v2');
+    const inviteRef = await addDoc(linkRef, {
+      ...linkData,
+      inviteCode,
+      currentUses: 0,
+      createdAt: serverTimestamp()
+    });
+    
+    return inviteRef.id;
+  }
+
+  async getSettlementInviteLink(inviteCode: string): Promise<SettlementInviteLink | null> {
+    const q = query(
+      collection(db, 'settlement_invite_links_v2'),
+      where('inviteCode', '==', inviteCode),
+      where('isActive', '==', true),
+      limit(1)
+    );
+    
+    const querySnapshot = await getDocs(q);
+    if (!querySnapshot.empty) {
+      const doc = querySnapshot.docs[0];
+      return { id: doc.id, ...doc.data() } as SettlementInviteLink;
+    }
+    return null;
+  }
+
+  async useSettlementInviteLink(linkId: string): Promise<void> {
+    const linkRef = doc(db, 'settlement_invite_links_v2', linkId);
+    await updateDoc(linkRef, {
+      currentUses: arrayUnion(1),
+      lastUsedAt: serverTimestamp()
+    });
+  }
+
+  async getSettlementMembers(settlementId: string): Promise<SettlementMember[]> {
+    // Get settlement owner
+    const settlement = await this.getSettlement(settlementId);
+    if (!settlement) return [];
+
+    const ownerV2 = await this.getUser(settlement.ownerId);
+    const members: SettlementMember[] = [];
+
+    if (ownerV2) {
+      const owner = this.convertUserV2ToUser(ownerV2);
+      members.push({
+        user: owner,
+        collaboration: {
+          id: `owner_${settlement.ownerId}`,
+          settlementId,
+          userId: settlement.ownerId,
+          invitedBy: settlement.ownerId,
+          role: 'co_owner',
+          status: 'active',
+          permissions: this.getFullPermissions(),
+          invitedAt: this.safeToDate(settlement.createdAt),
+          acceptedAt: this.safeToDate(settlement.createdAt),
+          metadata: {
+            activityLog: [],
+            version: 1
+          }
+        },
+        isOwner: true
+      });
+    }
+
+    // Get collaborators
+    const collaborators = await this.getSettlementCollaborators(settlementId);
+    for (const collab of collaborators) {
+      const userV2 = await this.getUser(collab.userId);
+      if (userV2) {
+        const user = this.convertUserV2ToUser(userV2);
+        // Convert timestamps to dates in collaboration
+        const convertedCollab: SettlementCollaboration = {
+          ...collab,
+          invitedAt: (collab.invitedAt as any).toDate ? (collab.invitedAt as any).toDate() : collab.invitedAt,
+          acceptedAt: collab.acceptedAt ? ((collab.acceptedAt as any).toDate ? (collab.acceptedAt as any).toDate() : collab.acceptedAt) : undefined,
+          lastActiveAt: collab.lastActiveAt ? ((collab.lastActiveAt as any).toDate ? (collab.lastActiveAt as any).toDate() : collab.lastActiveAt) : undefined,
+          removedAt: collab.removedAt ? ((collab.removedAt as any).toDate ? (collab.removedAt as any).toDate() : collab.removedAt) : undefined
+        };
+        
+        members.push({
+          user,
+          collaboration: convertedCollab,
+          isOwner: false
+        });
+      }
+    }
+
+    return members;
+  }
+
+  private convertUserV2ToUser(userV2: UserV2): User {
+    return {
+      id: userV2.id,
+      email: userV2.email,
+      displayName: userV2.displayName,
+      photoURL: userV2.photoURL,
+      emailVerified: true, // Default value
+      providerId: 'firebase', // Default value
+      createdAt: this.safeToDate(userV2.createdAt),
+      lastSignIn: this.safeToDate(userV2.lastSignIn),
+      defaultSettlementId: userV2.defaultSettlementId,
+      preferences: {
+        theme: userV2.preferences.theme || 'auto',
+        language: 'en',
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        notifications: {
+          email: userV2.preferences.notifications || false,
+          taskReminders: true,
+          collaborationInvites: true,
+          projectUpdates: true
+        },
+        privacy: {
+          showEmail: false,
+          allowDiscovery: true,
+          shareStatistics: false
+        }
+      },
+      metadata: {
+        totalProjects: 0,
+        totalCollaborations: 0,
+        lastActiveAt: this.safeToDate(userV2.lastSignIn),
+        version: 1
+      }
+    };
+  }
+
+  private getFullPermissions(): SettlementCollaborationPermissions {
+    return {
+      canViewProjects: true,
+      canCreateProjects: true,
+      canEditProjects: true,
+      canDeleteProjects: true,
+      canViewTasks: true,
+      canCreateTasks: true,
+      canEditTasks: true,
+      canDeleteTasks: true,
+      canAssignTasks: true,
+      canViewInventory: true,
+      canEditInventory: true,
+      canManageReservations: true,
+      canInviteUsers: true,
+      canRemoveUsers: true,
+      canChangeRoles: true,
+      canEditSettings: true,
+      canDeleteSettlement: true,
+      canExportData: true
+    };
+  }
+
+  getDefaultPermissions(role: SettlementCollaboratorRole): SettlementCollaborationPermissions {
+    const base = {
+      canViewProjects: false,
+      canCreateProjects: false,
+      canEditProjects: false,
+      canDeleteProjects: false,
+      canViewTasks: false,
+      canCreateTasks: false,
+      canEditTasks: false,
+      canDeleteTasks: false,
+      canAssignTasks: false,
+      canViewInventory: false,
+      canEditInventory: false,
+      canManageReservations: false,
+      canInviteUsers: false,
+      canRemoveUsers: false,
+      canChangeRoles: false,
+      canEditSettings: false,
+      canDeleteSettlement: false,
+      canExportData: false
+    };
+
+    switch (role) {
+      case 'viewer':
+        return {
+          ...base,
+          canViewProjects: true,
+          canViewTasks: true,
+          canViewInventory: true
+        };
+      case 'contributor':
+        return {
+          ...base,
+          canViewProjects: true,
+          canCreateProjects: true,
+          canEditProjects: true,
+          canViewTasks: true,
+          canCreateTasks: true,
+          canEditTasks: true,
+          canAssignTasks: true,
+          canViewInventory: true,
+          canEditInventory: true
+        };
+      case 'admin':
+        return {
+          ...base,
+          canViewProjects: true,
+          canCreateProjects: true,
+          canEditProjects: true,
+          canDeleteProjects: true,
+          canViewTasks: true,
+          canCreateTasks: true,
+          canEditTasks: true,
+          canDeleteTasks: true,
+          canAssignTasks: true,
+          canViewInventory: true,
+          canEditInventory: true,
+          canManageReservations: true,
+          canInviteUsers: true,
+          canRemoveUsers: true,
+          canChangeRoles: true,
+          canExportData: true
+        };
+      case 'co_owner':
+        return this.getFullPermissions();
+      default:
+        return base;
+    }
   }
 
   // Real-time subscriptions

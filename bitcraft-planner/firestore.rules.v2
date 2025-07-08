@@ -97,7 +97,53 @@ service cloud.firestore {
     // Check if user has settlement access
     function hasSettlementAccess(userId, settlementId) {
       let settlement = getSettlementDoc(settlementId);
-      return userId == settlement.data.ownerId || settlement.data.settings.isPublic == true;
+      return userId == settlement.data.ownerId || 
+             settlement.data.settings.isPublic == true ||
+             hasActiveSettlementCollaboration(userId, settlementId);
+    }
+    
+    // Check if settlement collaboration exists and is active
+    function hasActiveSettlementCollaboration(userId, settlementId) {
+      let collabId = userId + '_' + settlementId;
+      return exists(/databases/$(database)/documents/settlement_collaborations_v2/$(collabId)) &&
+             get(/databases/$(database)/documents/settlement_collaborations_v2/$(collabId)).data.status == 'active';
+    }
+    
+    // Get settlement collaboration document
+    function getSettlementCollaborationDoc(userId, settlementId) {
+      let collabId = userId + '_' + settlementId;
+      return get(/databases/$(database)/documents/settlement_collaborations_v2/$(collabId));
+    }
+    
+    // Check if user has write access to settlement
+    function hasSettlementWriteAccess(userId, settlementId) {
+      let settlement = getSettlementDoc(settlementId);
+      if (userId == settlement.data.ownerId) {
+        return true;
+      }
+      
+      if (hasActiveSettlementCollaboration(userId, settlementId)) {
+        let collab = getSettlementCollaborationDoc(userId, settlementId);
+        return collab.data.permissions.canEditProjects == true && 
+               collab.data.role in ['contributor', 'admin', 'co_owner'];
+      }
+      
+      return false;
+    }
+    
+    // Check if user has admin access to settlement
+    function hasSettlementAdminAccess(userId, settlementId) {
+      let settlement = getSettlementDoc(settlementId);
+      if (userId == settlement.data.ownerId) {
+        return true;
+      }
+      
+      if (hasActiveSettlementCollaboration(userId, settlementId)) {
+        let collab = getSettlementCollaborationDoc(userId, settlementId);
+        return collab.data.role in ['admin', 'co_owner'];
+      }
+      
+      return false;
     }
     
     // Check if user can manage tasks (assigned, creator, or project member)
@@ -158,9 +204,8 @@ service cloud.firestore {
     // ========================================================================
     
     match /settlements_v2/{settlementId} {
-      // Read access: owners and public settlements
-      allow read: if isAuthenticated() && 
-                     (isOwner(resource.data.ownerId) || resource.data.settings.isPublic == true);
+      // Read access: owners, collaborators, and public settlements
+      allow read: if isAuthenticated() && hasSettlementAccess(request.auth.uid, settlementId);
       
       // Create access: only for authenticated users creating their own settlement
       allow create: if isAuthenticated() && 
@@ -168,9 +213,9 @@ service cloud.firestore {
                        isOwner(request.resource.data.ownerId) &&
                        request.resource.data.id == settlementId;
       
-      // Update access: only owners
+      // Update access: owners and collaborators with write permission
       allow update: if isAuthenticated() && 
-                       isOwner(resource.data.ownerId) &&
+                       hasSettlementWriteAccess(request.auth.uid, settlementId) &&
                        hasRequiredSettlementFields(request.resource.data) &&
                        request.resource.data.ownerId == resource.data.ownerId; // Cannot change owner
       
@@ -265,6 +310,67 @@ service cloud.firestore {
       allow delete: if isAuthenticated() && 
                        (request.auth.uid == resource.data.userId ||
                         hasProjectAdminAccess(request.auth.uid, resource.data.projectId));
+    }
+    
+    // ========================================================================
+    // SETTLEMENT COLLABORATIONS COLLECTION
+    // ========================================================================
+    
+    match /settlement_collaborations_v2/{collaborationId} {
+      // Read access: involved users and settlement members
+      allow read: if isAuthenticated() && 
+                     (request.auth.uid == resource.data.userId ||
+                      hasSettlementAccess(request.auth.uid, resource.data.settlementId));
+      
+      // Create access: settlement admins can invite collaborators
+      allow create: if isAuthenticated() && 
+                       'settlementId' in request.resource.data &&
+                       'userId' in request.resource.data &&
+                       'invitedBy' in request.resource.data &&
+                       hasSettlementAdminAccess(request.auth.uid, request.resource.data.settlementId) &&
+                       request.resource.data.invitedBy == request.auth.uid &&
+                       request.resource.data.id == collaborationId;
+      
+      // Update access: users can accept invites, admins can modify roles
+      allow update: if isAuthenticated() && 
+                       request.resource.data.settlementId == resource.data.settlementId &&
+                       request.resource.data.userId == resource.data.userId &&
+                       (request.auth.uid == resource.data.userId || // User accepting/rejecting
+                        hasSettlementAdminAccess(request.auth.uid, resource.data.settlementId)); // Admin managing
+      
+      // Delete access: users can leave, admins can remove
+      allow delete: if isAuthenticated() && 
+                       (request.auth.uid == resource.data.userId ||
+                        hasSettlementAdminAccess(request.auth.uid, resource.data.settlementId));
+    }
+    
+    // ========================================================================
+    // SETTLEMENT INVITE LINKS COLLECTION
+    // ========================================================================
+    
+    match /settlement_invite_links_v2/{linkId} {
+      // Read access: settlement members and users with link
+      allow read: if isAuthenticated() && 
+                     (hasSettlementAccess(request.auth.uid, resource.data.settlementId) ||
+                      resource.data.isActive == true); // Allow reading active invite links
+      
+      // Create access: settlement admins
+      allow create: if isAuthenticated() && 
+                       'settlementId' in request.resource.data &&
+                       'createdBy' in request.resource.data &&
+                       hasSettlementAdminAccess(request.auth.uid, request.resource.data.settlementId) &&
+                       request.resource.data.createdBy == request.auth.uid &&
+                       request.resource.data.id == linkId;
+      
+      // Update access: settlement admins and system (for usage tracking)
+      allow update: if isAuthenticated() && 
+                       hasSettlementAdminAccess(request.auth.uid, resource.data.settlementId) &&
+                       request.resource.data.settlementId == resource.data.settlementId &&
+                       request.resource.data.createdBy == resource.data.createdBy;
+      
+      // Delete access: settlement admins
+      allow delete: if isAuthenticated() && 
+                       hasSettlementAdminAccess(request.auth.uid, resource.data.settlementId);
     }
     
     // ========================================================================

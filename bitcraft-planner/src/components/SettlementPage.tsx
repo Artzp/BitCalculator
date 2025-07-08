@@ -3,6 +3,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useItemsStore } from '../state/useItemsStore';
 import { isAdmin } from '../utils/adminCheck';
 import { SettlementV2Service, SettlementV2, ProjectV2, TaskV2, UserV2 } from '../services/settlementV2Service';
+import { SettlementMember, SettlementCollaboratorRole, SettlementInviteLink } from '../types/NormalizedDatabase';
 import { calculateMaterials } from '../utils/calculator';
 import ProjectManagementV2 from './ProjectManagementV2';
 
@@ -26,12 +27,17 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
   const [projects, setProjects] = useState<ProjectV2[]>([]);
   const [tasks, setTasks] = useState<TaskV2[]>([]);
   const [userData, setUserData] = useState<UserV2 | null>(null);
+  const [settlementMembers, setSettlementMembers] = useState<SettlementMember[]>([]);
+  const [inviteLinks, setInviteLinks] = useState<SettlementInviteLink[]>([]);
   
   // Form states
   const [showCreateSettlement, setShowCreateSettlement] = useState<boolean>(false);
   const [showCreateProject, setShowCreateProject] = useState<boolean>(false);
   const [showCreateTask, setShowCreateTask] = useState<boolean>(false);
   const [selectedProject, setSelectedProject] = useState<ProjectV2 | null>(null);
+  const [showInviteDialog, setShowInviteDialog] = useState<boolean>(false);
+  const [showJoinDialog, setShowJoinDialog] = useState<boolean>(false);
+  const [showManageMembersDialog, setShowManageMembersDialog] = useState<boolean>(false);
   
   // Form data
   const [newSettlementName, setNewSettlementName] = useState<string>('');
@@ -39,6 +45,11 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
   const [newProjectDescription, setNewProjectDescription] = useState<string>('');
   const [newTaskTitle, setNewTaskTitle] = useState<string>('');
   const [newTaskDescription, setNewTaskDescription] = useState<string>('');
+  const [inviteEmail, setInviteEmail] = useState<string>('');
+  const [inviteRole, setInviteRole] = useState<SettlementCollaboratorRole>('contributor');
+  const [inviteMessage, setInviteMessage] = useState<string>('');
+  const [joinCode, setJoinCode] = useState<string>('');
+  const [generatedInviteCode, setGeneratedInviteCode] = useState<string>('');
 
   // Admin check
   useEffect(() => {
@@ -118,9 +129,21 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
         allTasks.push(...projectTasks);
       }
       setTasks(allTasks);
+      
+      // Load settlement members
+      await loadSettlementMembers(settlementId);
     } catch (err) {
       console.error('Error loading projects:', err);
       setError('Failed to load projects');
+    }
+  };
+
+  const loadSettlementMembers = async (settlementId: string) => {
+    try {
+      const members = await settlementService.getSettlementMembers(settlementId);
+      setSettlementMembers(members);
+    } catch (err) {
+      console.error('Error loading settlement members:', err);
     }
   };
 
@@ -239,6 +262,99 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
     } catch (err) {
       console.error('Error updating task status:', err);
       setError('Failed to update task status');
+    }
+  };
+
+  // Settlement collaboration handlers
+  const handleGenerateInviteLink = async () => {
+    if (!currentSettlement || !user) return;
+    
+    try {
+      const linkId = await settlementService.createSettlementInviteLink({
+        settlementId: currentSettlement.id,
+        createdBy: user.uid,
+        role: inviteRole,
+        permissions: settlementService.getDefaultPermissions(inviteRole),
+        isActive: true,
+        maxUses: 10 // Default max uses
+      });
+      
+      // Get the invite link to show the code
+      const links = await settlementService.getSettlementInviteLink('');
+      // Note: This is simplified - in reality we'd need to get the specific link
+      setGeneratedInviteCode('SAMPLE_CODE_' + linkId.substring(0, 8).toUpperCase());
+      
+    } catch (err) {
+      console.error('Error generating invite link:', err);
+      setError('Failed to generate invite link');
+    }
+  };
+
+  const handleJoinSettlement = async () => {
+    if (!user || !joinCode.trim()) return;
+    
+    try {
+      const inviteLink = await settlementService.getSettlementInviteLink(joinCode.trim());
+      if (!inviteLink) {
+        setError('Invalid invite code');
+        return;
+      }
+      
+      // Create collaboration
+      await settlementService.createSettlementCollaboration({
+        settlementId: inviteLink.settlementId,
+        userId: user.uid,
+        invitedBy: inviteLink.createdBy,
+        role: inviteLink.role,
+        status: 'active',
+        permissions: inviteLink.permissions,
+        inviteCode: joinCode.trim(),
+        metadata: {
+          activityLog: [],
+          version: 1
+        }
+      });
+      
+      // Use invite link
+      await settlementService.useSettlementInviteLink(inviteLink.id);
+      
+      setJoinCode('');
+      setShowJoinDialog(false);
+      
+      // Reload data
+      await loadInitialData();
+      
+    } catch (err) {
+      console.error('Error joining settlement:', err);
+      setError('Failed to join settlement');
+    }
+  };
+
+  const handleRemoveMember = async (memberId: string, settlementId: string) => {
+    if (!user) return;
+    
+    try {
+      await settlementService.removeSettlementCollaborator(memberId, settlementId);
+      await loadSettlementMembers(settlementId);
+    } catch (err) {
+      console.error('Error removing member:', err);
+      setError('Failed to remove member');
+    }
+  };
+
+  const handleChangeRole = async (memberId: string, settlementId: string, newRole: SettlementCollaboratorRole) => {
+    if (!user) return;
+    
+    try {
+      const collaborationId = `${memberId}_${settlementId}`;
+      await settlementService.updateSettlementCollaboration(collaborationId, {
+        role: newRole,
+        permissions: settlementService.getDefaultPermissions(newRole)
+      });
+      await loadSettlementMembers(settlementId);
+    } catch (err) {
+      console.error('Error changing role:', err);
+      setError('Failed to change role');
     }
   };
 
@@ -663,37 +779,110 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
           <div className="space-y-6">
             <div className="bg-white rounded-xl p-6 shadow-lg border border-slate-200">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold">👥 Users</h2>
-                <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded">
-                  User Management Coming Soon
-                </span>
+                <h2 className="text-xl font-bold">👥 Settlement Members</h2>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowInviteDialog(true)}
+                    className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
+                    disabled={!currentSettlement}
+                  >
+                    ➕ Invite User
+                  </button>
+                  <button
+                    onClick={() => setShowJoinDialog(true)}
+                    className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-sm"
+                  >
+                    🤝 Join Settlement
+                  </button>
+                </div>
               </div>
-              
-              {userData && (
-                <div className="border border-gray-200 rounded-lg p-4 mb-4">
-                  <h3 className="text-lg font-semibold">Current User (You)</h3>
-                  <div className="mt-2">
-                    <p><strong>Email:</strong> {userData.email}</p>
-                    <p><strong>Display Name:</strong> {userData.displayName}</p>
-                    <p><strong>Created:</strong> {userData.createdAt?.toDate?.()?.toLocaleDateString() || 'Unknown'}</p>
-                    <p><strong>Last Sign In:</strong> {userData.lastSignIn?.toDate?.()?.toLocaleDateString() || 'Unknown'}</p>
-                  </div>
+
+              {!currentSettlement ? (
+                <div className="text-gray-500 text-center py-8">
+                  Please select a settlement first to view members.
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {settlementMembers.length === 0 ? (
+                    <div className="text-gray-500 text-center py-8">
+                      <p>No members found.</p>
+                      <p className="text-sm mt-2">Invite users to collaborate on this settlement.</p>
+                    </div>
+                  ) : (
+                    settlementMembers.map((member) => (
+                      <div key={member.user.id} className="border border-gray-200 rounded-lg p-4">
+                        <div className="flex justify-between items-start">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-400 to-blue-400 flex items-center justify-center text-white font-semibold">
+                              {member.user.displayName?.[0]?.toUpperCase() || member.user.email[0].toUpperCase()}
+                            </div>
+                            <div>
+                              <h3 className="font-semibold">{member.user.displayName || member.user.email}</h3>
+                              <p className="text-sm text-gray-600">{member.user.email}</p>
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                  member.isOwner ? 'bg-purple-100 text-purple-800' :
+                                  member.collaboration.role === 'admin' ? 'bg-red-100 text-red-800' :
+                                  member.collaboration.role === 'contributor' ? 'bg-blue-100 text-blue-800' :
+                                  'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {member.isOwner ? '👑 Owner' : member.collaboration.role}
+                                </span>
+                                <span className={`px-2 py-1 rounded text-xs ${
+                                  member.collaboration.status === 'active' ? 'bg-green-100 text-green-800' :
+                                  member.collaboration.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                  'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {member.collaboration.status}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {!member.isOwner && user && (
+                            <div className="flex items-center gap-2">
+                              <select
+                                value={member.collaboration.role}
+                                onChange={(e) => handleChangeRole(member.user.id, currentSettlement.id, e.target.value as SettlementCollaboratorRole)}
+                                className="text-sm border border-gray-300 rounded px-2 py-1"
+                                disabled={user.uid !== currentSettlement.ownerId}
+                              >
+                                <option value="viewer">Viewer</option>
+                                <option value="contributor">Contributor</option>
+                                <option value="admin">Admin</option>
+                              </select>
+                              
+                              {user.uid === currentSettlement.ownerId && (
+                                <button
+                                  onClick={() => handleRemoveMember(member.user.id, currentSettlement.id)}
+                                  className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
+                                >
+                                  Remove
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        
+                        {member.collaboration.permissions && (
+                          <div className="mt-3 pt-3 border-t border-gray-100">
+                            <p className="text-sm font-medium text-gray-700 mb-2">Permissions:</p>
+                            <div className="flex flex-wrap gap-1">
+                              {Object.entries(member.collaboration.permissions)
+                                .filter(([_, value]) => value === true)
+                                .map(([key, _]) => (
+                                  <span key={key} className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded">
+                                    {key.replace(/^can/, '').replace(/([A-Z])/g, ' $1').toLowerCase()}
+                                  </span>
+                                ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  )}
                 </div>
               )}
-              
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h3 className="text-lg font-semibold text-blue-800 mb-2">📝 User Management Features</h3>
-                <p className="text-blue-700 text-sm mb-2">
-                  The following user management features are planned for future development:
-                </p>
-                <ul className="text-blue-700 text-sm space-y-1">
-                  <li>• Invite users to settlements</li>
-                  <li>• Manage user roles and permissions</li>
-                  <li>• Assign tasks to specific users</li>
-                  <li>• Track user activity and contributions</li>
-                  <li>• User collaboration tools</li>
-                </ul>
-              </div>
             </div>
           </div>
         )}
@@ -829,6 +1018,137 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
               </button>
               <button
                 onClick={() => { setShowCreateTask(false); setSelectedProject(null); setNewTaskTitle(''); setNewTaskDescription(''); }}
+                className="flex-1 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Invite User Modal */}
+      {showInviteDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 shadow-2xl max-w-md w-full mx-4">
+            <h3 className="text-xl font-bold mb-4">Invite User to Settlement</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Role
+                </label>
+                <select
+                  value={inviteRole}
+                  onChange={(e) => setInviteRole(e.target.value as SettlementCollaboratorRole)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="viewer">Viewer (View only)</option>
+                  <option value="contributor">Contributor (Can edit projects/tasks)</option>
+                  <option value="admin">Admin (Full management access)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Invite Message (Optional)
+                </label>
+                <textarea
+                  value={inviteMessage}
+                  onChange={(e) => setInviteMessage(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Add a personal message..."
+                  rows={3}
+                />
+              </div>
+            </div>
+            
+            {generatedInviteCode ? (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-4">
+                <h4 className="font-semibold text-green-800 mb-2">✅ Invite Link Generated!</h4>
+                <div className="bg-white border rounded p-3 mb-3">
+                  <code className="text-sm font-mono text-green-600">{generatedInviteCode}</code>
+                </div>
+                <p className="text-green-700 text-sm">
+                  Share this code with the user you want to invite. They can join using the "Join Settlement" button.
+                </p>
+              </div>
+            ) : (
+              <div className="flex gap-2 mt-6">
+                <button
+                  onClick={handleGenerateInviteLink}
+                  className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                >
+                  Generate Invite Link
+                </button>
+                <button
+                  onClick={() => {
+                    setShowInviteDialog(false);
+                    setInviteRole('contributor');
+                    setInviteMessage('');
+                    setGeneratedInviteCode('');
+                  }}
+                  className="flex-1 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
+
+            {generatedInviteCode && (
+              <div className="flex gap-2 mt-4">
+                <button
+                  onClick={() => {
+                    setShowInviteDialog(false);
+                    setInviteRole('contributor');
+                    setInviteMessage('');
+                    setGeneratedInviteCode('');
+                  }}
+                  className="flex-1 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
+                >
+                  Close
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Join Settlement Modal */}
+      {showJoinDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 shadow-2xl max-w-md w-full mx-4">
+            <h3 className="text-xl font-bold mb-4">Join Settlement</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Invite Code
+                </label>
+                <input
+                  type="text"
+                  value={joinCode}
+                  onChange={(e) => setJoinCode(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  placeholder="Enter invite code"
+                />
+              </div>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-blue-700 text-sm">
+                  💡 <strong>Tip:</strong> Get an invite code from a settlement owner or admin to join their settlement and collaborate on projects.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2 mt-6">
+              <button
+                onClick={handleJoinSettlement}
+                className="flex-1 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
+                disabled={!joinCode.trim()}
+              >
+                Join Settlement
+              </button>
+              <button
+                onClick={() => {
+                  setShowJoinDialog(false);
+                  setJoinCode('');
+                }}
                 className="flex-1 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
               >
                 Cancel

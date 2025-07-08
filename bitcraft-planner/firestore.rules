@@ -213,6 +213,30 @@ service cloud.firestore {
       allow list: if request.auth != null && 
         (resource == null || request.auth.uid == resource.data.userId);
     }
+
+    // Settlement collaborations collection
+    match /settlement_collaborations_v2/{collaborationId} {
+      allow read: if request.auth != null && 
+        (request.auth.uid == resource.data.userId || 
+         request.auth.uid == resource.data.invitedBy);
+      allow write: if request.auth != null && 
+        request.auth.uid == resource.data.invitedBy;
+      allow create: if request.auth != null && 
+        request.auth.uid == request.resource.data.invitedBy;
+      allow list: if request.auth != null;
+    }
+
+    // Settlement invite links collection
+    match /settlement_invite_links_v2/{linkId} {
+      allow read: if request.auth != null && 
+        (request.auth.uid == resource.data.createdBy || 
+         resource.data.isActive == true);
+      allow write: if request.auth != null && 
+        request.auth.uid == resource.data.createdBy;
+      allow create: if request.auth != null && 
+        request.auth.uid == request.resource.data.createdBy;
+      allow list: if request.auth != null;
+    }
     
     // Functions to validate data
     function validateSharedBuild(data) {
