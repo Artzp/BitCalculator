@@ -85,4 +85,4 @@ Write-Host "========================================" -ForegroundColor Green
 Write-Host ""
 Write-Host "Your app is live at: https://bitcraftcalculator.web.app" -ForegroundColor Cyan
 Write-Host ""
-Read-Host "Press Enter to exit" 
+Read-Host "Press Enter to exit"

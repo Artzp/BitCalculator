@@ -551,17 +551,33 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
               </div>
               
               {settlements.length === 0 ? (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                  <h3 className="font-semibold text-yellow-800 mb-2">🏗️ Get Started</h3>
-                  <p className="text-yellow-700 text-sm mb-3">
-                    Welcome to the Settlement System! To get started, you'll need to create your first settlement.
+                <div className="bg-gradient-to-r from-blue-50 to-green-50 border border-blue-200 rounded-lg p-6">
+                  <h3 className="font-semibold text-gray-800 mb-3">🏗️ Welcome to the Settlement System!</h3>
+                  <p className="text-gray-700 text-sm mb-4">
+                    Get started by creating your own settlement or joining an existing one with an invite code.
                   </p>
-                  <button 
-                    onClick={() => setActiveView('settlements')}
-                    className="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 text-sm"
-                  >
-                    Go to Settlements Tab
-                  </button>
+                  <div className="flex gap-3">
+                    <button 
+                      onClick={() => setShowCreateSettlement(true)}
+                      className="flex-1 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
+                    >
+                      🏗️ Create Settlement
+                    </button>
+                    <button 
+                      onClick={() => setShowJoinDialog(true)}
+                      className="flex-1 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 text-sm"
+                    >
+                      🤝 Join Settlement
+                    </button>
+                  </div>
+                  <p className="text-gray-600 text-xs mt-3 text-center">
+                    Or visit the <button 
+                      onClick={() => setActiveView('settlements')}
+                      className="text-blue-600 hover:text-blue-800 underline"
+                    >
+                      Settlements tab
+                    </button> for more options
+                  </p>
                 </div>
               ) : !currentSettlement ? (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -607,17 +623,53 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
             <div className="bg-white rounded-xl p-6 shadow-lg border border-slate-200">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-bold">🏘️ Settlements</h2>
-                <button 
-                  onClick={() => setShowCreateSettlement(true)}
-                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-                >
-                  + Create Settlement
-                </button>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => setShowJoinDialog(true)}
+                    className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+                  >
+                    🤝 Join Settlement
+                  </button>
+                  <button 
+                    onClick={() => setShowCreateSettlement(true)}
+                    className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                  >
+                    + Create Settlement
+                  </button>
+                </div>
               </div>
               
               {settlements.length === 0 ? (
-                <div className="text-gray-500 text-center py-8">
-                  No settlements found. Create your first settlement to get started!
+                <div className="text-center py-8">
+                  <div className="text-gray-500 mb-6">
+                    Welcome to the Settlement System! Get started by creating your own settlement or joining an existing one.
+                  </div>
+                  <div className="grid md:grid-cols-2 gap-4 max-w-2xl mx-auto">
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                      <h3 className="font-semibold text-blue-800 mb-3">🏗️ Create Settlement</h3>
+                      <p className="text-blue-700 text-sm mb-4">
+                        Start your own settlement to manage projects, inventory, and collaborate with others.
+                      </p>
+                      <button 
+                        onClick={() => setShowCreateSettlement(true)}
+                        className="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                      >
+                        Create New Settlement
+                      </button>
+                    </div>
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+                      <h3 className="font-semibold text-green-800 mb-3">🤝 Join Settlement</h3>
+                      <p className="text-green-700 text-sm mb-4">
+                        Join an existing settlement using an invite code to collaborate on projects.
+                      </p>
+                      <button 
+                        onClick={() => setShowJoinDialog(true)}
+                        className="w-full px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+                      >
+                        Join with Code
+                      </button>
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-4">

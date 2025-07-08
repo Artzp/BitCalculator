@@ -30,6 +30,10 @@ export const AuthHeader: React.FC = () => {
     }
   };
 
+  const handleDiscordClick = () => {
+    window.open('https://discord.gg/bgd4PChJ', '_blank', 'noopener,noreferrer');
+  };
+
   return (
     <div className="flex items-center justify-between mb-6">
       <h1 className="text-5xl font-bold text-blue-600">
@@ -37,6 +41,16 @@ export const AuthHeader: React.FC = () => {
       </h1>
       
       <div className="flex items-center space-x-4">
+        {/* Discord Support Button - Always visible */}
+        <button
+          onClick={handleDiscordClick}
+          className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors flex items-center space-x-2"
+          title="Join our Discord community for support, bug reports, feature requests, and discussions"
+        >
+          <span>💬</span>
+          <span>Discord Support</span>
+        </button>
+
         {user ? (
           <div className="flex items-center space-x-4">
             <div className="text-sm text-gray-600">
