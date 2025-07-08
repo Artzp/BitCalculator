@@ -17,6 +17,20 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == ownerId;
     }
     
+    // Helper function to check if user has active settlement collaboration
+    function hasActiveSettlementCollaboration(settlementId) {
+      return request.auth != null && 
+        exists(/databases/$(database)/documents/settlement_collaborations_v2/$(request.auth.uid + '_' + settlementId)) &&
+        get(/databases/$(database)/documents/settlement_collaborations_v2/$(request.auth.uid + '_' + settlementId)).data.status == 'active';
+    }
+    
+    // Helper function to check if user has settlement write access
+    function hasSettlementWriteAccess(settlementId) {
+      return hasActiveSettlementCollaboration(settlementId) &&
+        (get(/databases/$(database)/documents/settlement_collaborations_v2/$(request.auth.uid + '_' + settlementId)).data.permissions.canEditInventory == true ||
+         get(/databases/$(database)/documents/settlement_collaborations_v2/$(request.auth.uid + '_' + settlementId)).data.permissions.canCreateProjects == true);
+    }
+    
     // Users can access their own data, admins can access all user data
     match /users/{userId} {
       allow read, write: if request.auth != null && 
@@ -98,20 +112,22 @@ service cloud.firestore {
     // SETTLEMENT V2 COLLECTIONS - PRIVACY FIXED
     // ================================
     
-    // Settlements collection - FIXED: Users can only see their own settlements
+    // Settlements collection - FIXED: Users can only see their own settlements or collaborations
     match /settlements/{settlementId} {
-      // Read access: only owners (unless settlement is public)
+      // Read access: owners, public settlements, or collaborators
       allow read: if request.auth != null && 
         (request.auth.uid == resource.data.ownerId || 
-         (resource.data.settings != null && resource.data.settings.isPublic == true));
+         (resource.data.settings != null && resource.data.settings.isPublic == true) ||
+         hasActiveSettlementCollaboration(settlementId));
       
       // Create access: authenticated users creating their own settlements
       allow create: if request.auth != null && 
         request.auth.uid == request.resource.data.ownerId;
       
-      // Update access: only owners
+      // Update access: owners and collaborators with write access
       allow update: if request.auth != null && 
-        request.auth.uid == resource.data.ownerId;
+        (request.auth.uid == resource.data.ownerId ||
+         hasSettlementWriteAccess(settlementId));
       
       // Delete access: only owners
       allow delete: if request.auth != null && 
@@ -220,9 +236,11 @@ service cloud.firestore {
         (request.auth.uid == resource.data.userId || 
          request.auth.uid == resource.data.invitedBy);
       allow write: if request.auth != null && 
-        request.auth.uid == resource.data.invitedBy;
+        (request.auth.uid == resource.data.invitedBy ||
+         request.auth.uid == resource.data.userId);
       allow create: if request.auth != null && 
-        request.auth.uid == request.resource.data.invitedBy;
+        (request.auth.uid == request.resource.data.invitedBy ||
+         request.auth.uid == request.resource.data.userId);
       allow list: if request.auth != null;
     }
 
