@@ -287,7 +287,7 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
         role: inviteRole,
         permissions: settlementService.getDefaultPermissions(inviteRole),
         isActive: true,
-        maxUses: 10 // Default max uses
+        maxUses: 1 // Single use only
       });
       
       // Set the real invite code returned from the service
@@ -305,7 +305,14 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
     try {
       const inviteLink = await settlementService.getSettlementInviteLink(joinCode.trim());
       if (!inviteLink) {
-        setError('Invalid invite code');
+        setError('Invalid or expired invite code');
+        return;
+      }
+      
+      // Check if user is already a member of this settlement
+      const isAlreadyMember = await settlementService.isUserSettlementMember(user.uid, inviteLink.settlementId);
+      if (isAlreadyMember) {
+        setError('You are already a member of this settlement');
         return;
       }
       
@@ -324,7 +331,7 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
         }
       });
       
-      // Use invite link
+      // Use invite link (this will automatically deactivate single-use codes)
       await settlementService.useSettlementInviteLink(inviteLink.id);
       
       setJoinCode('');
@@ -335,7 +342,7 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
       
     } catch (err) {
       console.error('Error joining settlement:', err);
-      setError('Failed to join settlement');
+      setError('Failed to join settlement. ' + (err as Error).message);
     }
   };
 
@@ -364,6 +371,30 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
     } catch (err) {
       console.error('Error changing role:', err);
       setError('Failed to change role');
+    }
+  };
+
+  const handleCleanupDuplicates = async () => {
+    if (!currentSettlement || !user) return;
+    
+    try {
+      setLoading(true);
+      
+      // Clean up duplicate collaborations
+      await settlementService.cleanupDuplicateCollaborations(currentSettlement.id);
+      
+      // Clean up expired invite links
+      await settlementService.cleanupExpiredInviteLinks(currentSettlement.id);
+      
+      // Reload data
+      await loadInitialData();
+      
+      alert('✅ Cleanup completed! Duplicate memberships and expired invite codes have been removed.');
+    } catch (err) {
+      console.error('Error during cleanup:', err);
+      setError('Failed to cleanup duplicates: ' + (err as Error).message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -803,6 +834,15 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
                   >
                     🤝 Join Settlement
                   </button>
+                  {currentSettlement && (
+                    <button
+                      onClick={handleCleanupDuplicates}
+                      className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
+                      title="Remove duplicate memberships and expired invite codes"
+                    >
+                      🧹 Cleanup
+                    </button>
+                  )}
                 </div>
               </div>
 

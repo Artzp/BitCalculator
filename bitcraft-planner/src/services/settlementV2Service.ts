@@ -478,6 +478,18 @@ export class SettlementV2Service {
     return null;
   }
 
+  async isUserSettlementMember(userId: string, settlementId: string): Promise<boolean> {
+    // Check if user is settlement owner
+    const settlement = await this.getSettlement(settlementId);
+    if (settlement && settlement.ownerId === userId) {
+      return true;
+    }
+    
+    // Check if user has active collaboration
+    const collaboration = await this.getSettlementCollaboration(userId, settlementId);
+    return collaboration !== null && collaboration.status === 'active';
+  }
+
   async updateSettlementCollaboration(collaborationId: string, updates: Partial<SettlementCollaboration>): Promise<void> {
     const collabRef = doc(db, 'settlement_collaborations_v2', collaborationId);
     await updateDoc(collabRef, {
@@ -508,12 +520,17 @@ export class SettlementV2Service {
   async createSettlementInviteLink(linkData: Omit<SettlementInviteLink, 'id' | 'createdAt' | 'inviteCode' | 'currentUses'>): Promise<string> {
     const inviteCode = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
     const linkRef = collection(db, 'settlement_invite_links_v2');
-    const inviteRef = await addDoc(linkRef, {
+    
+    // Set default maxUses to 1 for single-use functionality
+    const finalLinkData = {
       ...linkData,
+      maxUses: linkData.maxUses || 1, // Default to single use
       inviteCode,
       currentUses: 0,
       createdAt: serverTimestamp()
-    });
+    };
+    
+    const inviteRef = await addDoc(linkRef, finalLinkData);
     
     return inviteCode; // Return the actual invite code, not the document ID
   }
@@ -529,17 +546,52 @@ export class SettlementV2Service {
     const querySnapshot = await getDocs(q);
     if (!querySnapshot.empty) {
       const doc = querySnapshot.docs[0];
-      return { id: doc.id, ...doc.data() } as SettlementInviteLink;
+      const linkData = { id: doc.id, ...doc.data() } as SettlementInviteLink;
+      
+      // Check if invite has expired
+      if (linkData.expiresAt) {
+        const now = new Date();
+        const expiresAt = this.safeToDate(linkData.expiresAt);
+        if (now > expiresAt) {
+          return null; // Expired
+        }
+      }
+      
+      // Check if invite has reached max uses
+      const maxUses = linkData.maxUses || 1; // Default to single use
+      const currentUses = linkData.currentUses || 0;
+      if (currentUses >= maxUses) {
+        return null; // Fully used
+      }
+      
+      return linkData;
     }
     return null;
   }
 
   async useSettlementInviteLink(linkId: string): Promise<void> {
     const linkRef = doc(db, 'settlement_invite_links_v2', linkId);
-    await updateDoc(linkRef, {
-      currentUses: arrayUnion(1),
+    const linkDoc = await getDoc(linkRef);
+    
+    if (!linkDoc.exists()) {
+      throw new Error('Invite link not found');
+    }
+    
+    const linkData = linkDoc.data() as SettlementInviteLink;
+    const newUseCount = (linkData.currentUses || 0) + 1;
+    const maxUses = linkData.maxUses || 1; // Default to single use
+    
+    const updateData: any = {
+      currentUses: newUseCount,
       lastUsedAt: serverTimestamp()
-    });
+    };
+    
+    // If we've reached max uses, deactivate the invite link
+    if (newUseCount >= maxUses) {
+      updateData.isActive = false;
+    }
+    
+    await updateDoc(linkRef, updateData);
   }
 
   async getSettlementMembers(settlementId: string): Promise<SettlementMember[]> {
@@ -791,5 +843,93 @@ export class SettlementV2Service {
     
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as BuildListV2));
+  }
+
+  // Utility method to clean up expired or used invite links
+  async cleanupExpiredInviteLinks(settlementId: string): Promise<void> {
+    const q = query(
+      collection(db, 'settlement_invite_links_v2'),
+      where('settlementId', '==', settlementId)
+    );
+    
+    const querySnapshot = await getDocs(q);
+    const batch = writeBatch(db);
+    const now = new Date();
+    
+    querySnapshot.docs.forEach(doc => {
+      const linkData = doc.data() as SettlementInviteLink;
+      
+      // Check if link should be deactivated
+      const shouldDeactivate = 
+        // Already inactive
+        !linkData.isActive ||
+        // Expired
+        (linkData.expiresAt && now > this.safeToDate(linkData.expiresAt)) ||
+        // Reached max uses
+        ((linkData.currentUses || 0) >= (linkData.maxUses || 1));
+      
+      if (shouldDeactivate && linkData.isActive) {
+        batch.update(doc.ref, { isActive: false });
+      }
+    });
+    
+    await batch.commit();
+  }
+
+  // Utility method to deactivate all invite links for a settlement
+  async deactivateAllInviteLinks(settlementId: string): Promise<void> {
+    const q = query(
+      collection(db, 'settlement_invite_links_v2'),
+      where('settlementId', '==', settlementId),
+      where('isActive', '==', true)
+    );
+    
+    const querySnapshot = await getDocs(q);
+    const batch = writeBatch(db);
+    
+    querySnapshot.docs.forEach(doc => {
+      batch.update(doc.ref, { isActive: false });
+    });
+    
+    await batch.commit();
+  }
+
+  // Utility method to clean up duplicate collaborations for a settlement
+  async cleanupDuplicateCollaborations(settlementId: string): Promise<void> {
+    const collaborators = await this.getSettlementCollaborators(settlementId);
+    const userIdMap = new Map<string, SettlementCollaboration[]>();
+    
+    // Group collaborations by userId
+    collaborators.forEach(collab => {
+      const existing = userIdMap.get(collab.userId) || [];
+      existing.push(collab);
+      userIdMap.set(collab.userId, existing);
+    });
+    
+    const batch = writeBatch(db);
+    let hasOperations = false;
+    
+    // For each user with multiple collaborations, keep only the most recent active one
+    userIdMap.forEach((collabs, userId) => {
+      if (collabs.length > 1) {
+        // Sort by invite date, most recent first
+        collabs.sort((a, b) => {
+          const dateA = this.safeToDate(a.invitedAt);
+          const dateB = this.safeToDate(b.invitedAt);
+          return dateB.getTime() - dateA.getTime();
+        });
+        
+        // Keep the first (most recent) collaboration, remove the rest
+        for (let i = 1; i < collabs.length; i++) {
+          const collabRef = doc(db, 'settlement_collaborations_v2', collabs[i].id);
+          batch.delete(collabRef);
+          hasOperations = true;
+        }
+      }
+    });
+    
+    if (hasOperations) {
+      await batch.commit();
+    }
   }
 } 
