@@ -985,15 +985,132 @@ export const adminProjectRecovery = async () => {
   }
 };
 
-// Make recovery functions globally available for emergency use
+// IMMEDIATE EMERGENCY RECOVERY - Bypasses normal loading and forces project restoration
+export const immediateEmergencyRecovery = async () => {
+  console.log('🚨 IMMEDIATE EMERGENCY RECOVERY INITIATED');
+  
+  const user = auth.currentUser;
+  if (!user) {
+    console.error('❌ No authenticated user for emergency recovery');
+    alert('❌ You must be logged in to recover projects');
+    return { success: false, message: 'Not logged in' };
+  }
+  
+  try {
+    console.log('🔧 Step 1: Attempting to restore from collaboration records...');
+    const dbDebugger = new DatabaseDebugger();
+    
+    // Get all collaborations for this user
+    const collaborationsSnapshot = await getDocs(collection(db, 'projectCollaborations'));
+    const userCollaborations = collaborationsSnapshot.docs
+      .map(doc => ({ id: doc.id, ...doc.data() }))
+      .filter((collab: any) => collab.ownerId === user.uid && collab.isActive);
+
+    console.log(`🔍 Found ${userCollaborations.length} collaborations to potentially restore from`);
+
+    if (userCollaborations.length === 0) {
+      console.log('⚠️ No collaboration records found to restore from');
+      alert('⚠️ No backup data found in collaboration records. Try checking Debug tab for other recovery options.');
+      return { success: false, message: 'No collaboration backups found' };
+    }
+
+    // Get current user document
+    const userDocRef = doc(db, 'users', user.uid);
+    const userDoc = await getDoc(userDocRef);
+    
+    if (!userDoc.exists()) {
+      console.error('❌ User document does not exist');
+      alert('❌ User account data not found in database');
+      return { success: false, message: 'User document missing' };
+    }
+
+    const userData = userDoc.data();
+    
+    // Create projects from collaboration data
+    const restoredProjects = userCollaborations.map((collab: any) => ({
+      id: collab.projectId,
+      name: collab.projectName,
+      description: `🔧 Emergency restore from collaboration backup on ${new Date().toLocaleString()}`,
+      status: 'not_started' as const,
+      priority: 'medium' as const,
+      assignedPlayers: [],
+      items: [],
+      progressPercentage: 0,
+      dateCreated: collab.createdAt || new Date(),
+      notes: `EMERGENCY RECOVERY: Restored from collaboration backup. Original data may be incomplete. Collaboration ID: ${collab.id}`
+    }));
+
+    console.log(`🔧 Step 2: Creating settlement with ${restoredProjects.length} restored projects...`);
+
+    // Create a complete settlement structure
+    const restoredSettlement = {
+      id: userData.settlement?.id || `settlement-${user.uid}`,
+      name: userData.settlement?.name || 'My Settlement',
+      dateCreated: userData.settlement?.dateCreated || new Date(),
+      players: userData.settlement?.players || [],
+      projects: restoredProjects,
+      tasks: userData.settlement?.tasks || [],
+      inventory: userData.settlement?.inventory || {},
+      settings: userData.settlement?.settings || {}
+    };
+
+    console.log('🔧 Step 3: Saving restored settlement to Firebase...');
+    
+    // Force save the restored settlement to Firebase
+    await setDoc(userDocRef, {
+      ...userData,
+      settlement: restoredSettlement,
+      lastUpdated: serverTimestamp(),
+      version: (userData.version || 0) + 1
+    }, { merge: false }); // Use merge: false to ensure complete overwrite
+
+    console.log('✅ Step 4: Settlement saved to Firebase successfully');
+
+    // Now force update the local state
+    console.log('🔧 Step 5: Updating local application state...');
+    
+    // Dynamically import to avoid circular dependencies
+    const { useSettlementStore } = await import('../state/useSettlementStore');
+    
+    // Force set the settlement in the store
+    useSettlementStore.getState().setSettlement(restoredSettlement, { force: true });
+    
+    console.log('✅ Step 6: Local state updated successfully');
+
+    // Show success message
+    const message = `✅ EMERGENCY RECOVERY SUCCESSFUL!\n\nRestored ${restoredProjects.length} projects:\n${restoredProjects.map(p => `• ${p.name}`).join('\n')}\n\nPlease refresh the page to see your recovered projects.`;
+    
+    alert(message);
+    console.log('🎉 EMERGENCY RECOVERY COMPLETED SUCCESSFULLY');
+    
+    return { 
+      success: true, 
+      message: `Successfully restored ${restoredProjects.length} projects`,
+      restoredProjects: restoredProjects.length
+    };
+    
+  } catch (error) {
+    console.error('❌ Emergency recovery failed:', error);
+    const errorMessage = `Emergency recovery failed: ${error}`;
+    alert(`❌ ${errorMessage}\n\nTry refreshing the page and checking the Debug tab for other recovery options.`);
+    return { 
+      success: false, 
+      message: errorMessage 
+    };
+  }
+};
+
+// Make emergency recovery globally available
 if (typeof window !== 'undefined') {
   (window as any).emergencyProjectRecovery = quickProjectRecovery;
   (window as any).adminProjectRecovery = adminProjectRecovery;
+  (window as any).immediateEmergencyRecovery = immediateEmergencyRecovery;
   
   // Only log availability in development
   if (process.env.NODE_ENV === 'development') {
     console.log('🚨 Emergency Recovery Functions Available:');
     console.log('📱 For regular users: emergencyProjectRecovery()');
+    console.log('⚡ For immediate recovery: immediateEmergencyRecovery()');
     console.log('🔑 For admins: adminProjectRecovery()');
     console.log('💡 These functions can be called directly from browser console if needed');
   }

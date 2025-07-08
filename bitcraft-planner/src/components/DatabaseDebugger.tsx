@@ -4,6 +4,7 @@ import { isAdmin, getAdminInfo } from '../utils/adminCheck';
 import { useAuth } from '../hooks/useAuth';
 import { projectLogger } from '../utils/projectLogger';
 import { quickProjectRecovery, adminProjectRecovery } from '../utils/debugDatabase';
+import DataExporter from './DataExporter';
 
 export const DatabaseDebugger: React.FC = () => {
   const { user } = useAuth();
@@ -400,6 +401,9 @@ export const DatabaseDebugger: React.FC = () => {
           Advanced database debugging, project recovery, and orphaned data cleanup
         </p>
       </div>
+
+      {/* Data Backup Exporter */}
+      <DataExporter />
 
       {/* Emergency Project Recovery */}
       <div className="bg-white rounded-xl shadow-lg border border-red-200 p-6">

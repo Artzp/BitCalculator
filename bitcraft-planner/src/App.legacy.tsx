@@ -11,7 +11,6 @@ import { firebaseService, SaveStatus } from './services/firebaseService';
 import { SaveStatusIndicator } from './components/SaveStatusIndicator';
 import { auth } from './firebase/config';
 import { projectLogger } from './utils/projectLogger';
-import { isAdmin } from './utils/adminCheck';
 import './App.css';
 
 // Deep comparison utility
@@ -73,7 +72,6 @@ function App() {
   const [dataLoaded, setDataLoaded] = useState(false);
   const [currentPage, setCurrentPage] = useState<'calculator' | 'settlement'>('calculator');
   const [isRestoring, setIsRestoring] = useState(false);
-  const [isUserAdmin, setIsUserAdmin] = useState(false);
   
   // Make setIsRestoring available globally for DatabaseDebugger
   useEffect(() => {
@@ -82,17 +80,6 @@ function App() {
       delete (window as any).__setIsRestoring;
     };
   }, []);
-
-  // Admin check
-  useEffect(() => {
-    const adminStatus = isAdmin();
-    setIsUserAdmin(adminStatus);
-    
-    console.log('🔑 App.tsx Admin Check:', {
-      user: user?.email || 'Not logged in',
-      isAdmin: adminStatus
-    });
-  }, [user]);
   
   // Log restoration mode changes
   useEffect(() => {
@@ -588,10 +575,8 @@ function App() {
         <div className="h-[calc(100vh-280px)]">
           {currentPage === 'calculator' ? (
             <BitCalculatorPage />
-          ) : currentPage === 'settlement' ? (
-            <SettlementPage />
           ) : (
-            <BitCalculatorPage />
+            <SettlementPage />
           )}
         </div>
       </div>

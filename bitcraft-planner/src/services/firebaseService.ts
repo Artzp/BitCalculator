@@ -376,7 +376,17 @@ export class FirebaseService {
         
         // Debug: Log the actual projects array
         if (data.settlement?.projects) {
-          console.log('🔍 Projects in Firebase settlement object:', data.settlement.projects.map((p: any) => ({ name: p.name, id: p.id })));
+          if (Array.isArray(data.settlement.projects)) {
+            console.log('🔍 Projects in Firebase settlement object:', data.settlement.projects.map((p: any) => ({ name: p.name, id: p.id })));
+          } else {
+            console.log('⚠️ Projects field exists but is not an array:', typeof data.settlement.projects, data.settlement.projects);
+            // Try to convert to array if it's an object
+            if (typeof data.settlement.projects === 'object' && data.settlement.projects !== null) {
+              const projectsArray = Object.values(data.settlement.projects) as any[];
+              console.log('🔄 Converting projects object to array:', projectsArray);
+              data.settlement.projects = projectsArray;
+            }
+          }
         } else {
           console.log('❌ No projects array in Firebase settlement object');
         }
