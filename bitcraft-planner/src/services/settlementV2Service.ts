@@ -554,6 +554,9 @@ export class SettlementV2Service {
   }
 
   private convertUserV2ToUser(userV2: UserV2): User {
+    // Safe access to preferences object
+    const safePreferences = userV2.preferences || {};
+    
     return {
       id: userV2.id,
       email: userV2.email,
@@ -565,11 +568,11 @@ export class SettlementV2Service {
       lastSignIn: this.safeToDate(userV2.lastSignIn),
       defaultSettlementId: userV2.defaultSettlementId,
       preferences: {
-        theme: userV2.preferences.theme || 'auto',
+        theme: safePreferences.theme || 'auto',
         language: 'en',
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         notifications: {
-          email: userV2.preferences.notifications || false,
+          email: safePreferences.notifications || false,
           taskReminders: true,
           collaborationInvites: true,
           projectUpdates: true
