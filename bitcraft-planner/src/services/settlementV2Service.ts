@@ -629,6 +629,7 @@ export class SettlementV2Service {
     // Get collaborators
     const collaborators = await this.getSettlementCollaborators(settlementId);
     for (const collab of collaborators) {
+      console.log('Processing collaborator:', { userId: collab.userId, collaborationId: collab.id });
       const userV2 = await this.getUser(collab.userId);
       if (userV2) {
         const user = this.convertUserV2ToUser(userV2);
@@ -641,11 +642,15 @@ export class SettlementV2Service {
           removedAt: collab.removedAt ? this.safeToDate(collab.removedAt) : undefined
         };
         
+        console.log('Added member:', { userId: user.id, collaborationUserId: collab.userId });
+        
         members.push({
           user,
           collaboration: convertedCollab,
           isOwner: false
         });
+      } else {
+        console.warn('Could not find user for collaboration:', collab.userId);
       }
     }
 
@@ -655,6 +660,11 @@ export class SettlementV2Service {
   private convertUserV2ToUser(userV2: UserV2): User {
     // Safe access to preferences object
     const safePreferences = userV2.preferences || {};
+    
+    // Debug: Check for missing user ID
+    if (!userV2.id) {
+      console.warn('Warning: UserV2 object missing ID:', userV2);
+    }
     
     return {
       id: userV2.id,

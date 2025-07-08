@@ -349,12 +349,19 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
   const handleRemoveMember = async (memberId: string, settlementId: string) => {
     if (!user) return;
     
+    if (!memberId) {
+      console.error('Invalid member ID:', memberId);
+      setError('Invalid member ID - cannot remove member');
+      return;
+    }
+    
     try {
+      console.log('Removing member:', { memberId, settlementId });
       await settlementService.removeSettlementCollaborator(memberId, settlementId);
       await loadSettlementMembers(settlementId);
     } catch (err) {
       console.error('Error removing member:', err);
-      setError('Failed to remove member');
+      setError('Failed to remove member: ' + (err as Error).message);
     }
   };
 
@@ -859,7 +866,7 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
                     </div>
                   ) : (
                     settlementMembers.map((member) => (
-                      <div key={member.user.id} className="border border-gray-200 rounded-lg p-4">
+                      <div key={member.collaboration.userId || member.user.id || member.collaboration.id} className="border border-gray-200 rounded-lg p-4">
                         <div className="flex justify-between items-start">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-400 to-blue-400 flex items-center justify-center text-white font-semibold">
@@ -892,7 +899,7 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
                             <div className="flex items-center gap-2">
                               <select
                                 value={member.collaboration.role}
-                                onChange={(e) => handleChangeRole(member.user.id, currentSettlement.id, e.target.value as SettlementCollaboratorRole)}
+                                onChange={(e) => handleChangeRole(member.collaboration.userId || member.user.id, currentSettlement.id, e.target.value as SettlementCollaboratorRole)}
                                 className="text-sm border border-gray-300 rounded px-2 py-1"
                                 disabled={user.uid !== currentSettlement.ownerId}
                               >
@@ -903,7 +910,7 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
                               
                               {user.uid === currentSettlement.ownerId && (
                                 <button
-                                  onClick={() => handleRemoveMember(member.user.id, currentSettlement.id)}
+                                  onClick={() => handleRemoveMember(member.collaboration.userId || member.user.id, currentSettlement.id)}
                                   className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
                                 >
                                   Remove
