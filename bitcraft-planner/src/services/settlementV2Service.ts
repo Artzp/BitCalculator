@@ -536,10 +536,10 @@ export class SettlementV2Service {
         // Convert timestamps to dates in collaboration
         const convertedCollab: SettlementCollaboration = {
           ...collab,
-          invitedAt: (collab.invitedAt as any).toDate ? (collab.invitedAt as any).toDate() : collab.invitedAt,
-          acceptedAt: collab.acceptedAt ? ((collab.acceptedAt as any).toDate ? (collab.acceptedAt as any).toDate() : collab.acceptedAt) : undefined,
-          lastActiveAt: collab.lastActiveAt ? ((collab.lastActiveAt as any).toDate ? (collab.lastActiveAt as any).toDate() : collab.lastActiveAt) : undefined,
-          removedAt: collab.removedAt ? ((collab.removedAt as any).toDate ? (collab.removedAt as any).toDate() : collab.removedAt) : undefined
+          invitedAt: this.safeToDate(collab.invitedAt),
+          acceptedAt: collab.acceptedAt ? this.safeToDate(collab.acceptedAt) : undefined,
+          lastActiveAt: collab.lastActiveAt ? this.safeToDate(collab.lastActiveAt) : undefined,
+          removedAt: collab.removedAt ? this.safeToDate(collab.removedAt) : undefined
         };
         
         members.push({
