@@ -814,11 +814,11 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
                         <div className="flex justify-between items-start">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-400 to-blue-400 flex items-center justify-center text-white font-semibold">
-                              {member.user.displayName?.[0]?.toUpperCase() || member.user.email[0].toUpperCase()}
+                              {member.user.displayName?.[0]?.toUpperCase() || member.user.email?.[0]?.toUpperCase() || '?'}
                             </div>
                             <div>
-                              <h3 className="font-semibold">{member.user.displayName || member.user.email}</h3>
-                              <p className="text-sm text-gray-600">{member.user.email}</p>
+                              <h3 className="font-semibold">{member.user.displayName || member.user.email || 'Unknown User'}</h3>
+                              <p className="text-sm text-gray-600">{member.user.email || 'No email'}</p>
                               <div className="flex items-center gap-2 mt-1">
                                 <span className={`px-2 py-1 rounded text-xs font-medium ${
                                   member.isOwner ? 'bg-purple-100 text-purple-800' :
