@@ -910,7 +910,16 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
                               
                               {user.uid === currentSettlement.ownerId && (
                                 <button
-                                  onClick={() => handleRemoveMember(member.collaboration.userId || member.user.id, currentSettlement.id)}
+                                  onClick={() => {
+                                    console.log('DEBUG: Member data for removal:', {
+                                      member,
+                                      collaborationUserId: member.collaboration?.userId,
+                                      userObjectId: member.user?.id,
+                                      collaborationId: member.collaboration?.id,
+                                      finalId: member.collaboration?.userId || member.user?.id
+                                    });
+                                    handleRemoveMember(member.collaboration?.userId || member.user?.id, currentSettlement.id);
+                                  }}
                                   className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
                                 >
                                   Remove

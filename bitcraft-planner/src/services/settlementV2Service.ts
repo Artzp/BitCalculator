@@ -457,6 +457,8 @@ export class SettlementV2Service {
   }
 
   async getSettlementCollaborators(settlementId: string): Promise<SettlementCollaboration[]> {
+    console.log('DEBUG: getSettlementCollaborators called with settlementId:', settlementId);
+    
     const q = query(
       collection(db, 'settlement_collaborations_v2'),
       where('settlementId', '==', settlementId),
@@ -464,7 +466,14 @@ export class SettlementV2Service {
     );
     
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SettlementCollaboration));
+    const collaborations = querySnapshot.docs.map(doc => {
+      const data = { id: doc.id, ...doc.data() } as SettlementCollaboration;
+      console.log('DEBUG: Raw collaboration data:', { docId: doc.id, data });
+      return data;
+    });
+    
+    console.log('DEBUG: Total collaborations found:', collaborations.length);
+    return collaborations;
   }
 
   async getSettlementCollaboration(userId: string, settlementId: string): Promise<SettlementCollaboration | null> {
@@ -499,12 +508,31 @@ export class SettlementV2Service {
   }
 
   async removeSettlementCollaborator(userId: string, settlementId: string): Promise<void> {
+    console.log('DEBUG removeSettlementCollaborator called with:', { userId, settlementId });
+    
+    if (!userId || userId === 'undefined') {
+      throw new Error(`Invalid userId: ${userId}`);
+    }
+    
+    if (!settlementId || settlementId === 'undefined') {
+      throw new Error(`Invalid settlementId: ${settlementId}`);
+    }
+    
     const collaborationId = `${userId}_${settlementId}`;
+    console.log('DEBUG: Generated collaboration ID:', collaborationId);
+    
     const collabRef = doc(db, 'settlement_collaborations_v2', collaborationId);
-    await updateDoc(collabRef, {
-      status: 'removed',
-      removedAt: serverTimestamp()
-    });
+    
+    try {
+      await updateDoc(collabRef, {
+        status: 'removed',
+        removedAt: serverTimestamp()
+      });
+      console.log('DEBUG: Successfully updated collaboration to removed status');
+    } catch (error) {
+      console.error('DEBUG: Error updating collaboration:', error);
+      throw error;
+    }
   }
 
   async acceptSettlementInvitation(userId: string, settlementId: string): Promise<void> {
