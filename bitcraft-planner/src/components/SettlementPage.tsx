@@ -78,23 +78,36 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
       
       // Load user data
       let userV2Data = await settlementService.getUser(user.uid);
-      if (!userV2Data) {
-        // Create user if doesn't exist
-        await settlementService.createUser(user.uid, {
+      
+      // Check if user data is corrupted (empty email/displayName) or doesn't exist
+      const isUserDataCorrupted = userV2Data && (!userV2Data.email || !userV2Data.displayName);
+      
+      if (!userV2Data || isUserDataCorrupted) {
+        // Create or fix user data
+        const newUserData = {
           email: user.email || '',
           displayName: user.displayName || user.email || 'Unknown User',
           photoURL: user.photoURL || undefined,
           preferences: {
-            theme: 'light',
+            theme: 'light' as const,
             notifications: true
           }
-        });
+        };
+        
+        if (userV2Data) {
+          // Update existing corrupted user
+          await settlementService.updateUser(user.uid, newUserData);
+        } else {
+          // Create new user
+          await settlementService.createUser(user.uid, newUserData);
+        }
+        
         userV2Data = await settlementService.getUser(user.uid);
       }
       setUserData(userV2Data);
       
-      // Load settlements
-      const userSettlements = await settlementService.getSettlementsByOwner(user.uid);
+      // Load settlements (both owned and collaborated)
+      const userSettlements = await settlementService.getSettlementsUserCanAccess(user.uid);
       setSettlements(userSettlements);
       
       // Set current settlement
@@ -248,8 +261,6 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
       setError('Failed to create task');
     }
   };
-
-
 
   const handleUpdateTaskStatus = async (taskId: string, status: TaskV2['status']) => {
     try {

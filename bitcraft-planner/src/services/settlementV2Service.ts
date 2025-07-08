@@ -238,6 +238,49 @@ export class SettlementV2Service {
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SettlementV2));
   }
 
+  async getSettlementsUserCanAccess(userId: string): Promise<SettlementV2[]> {
+    // Get settlements the user owns
+    const ownedSettlements = await this.getSettlementsByOwner(userId);
+    
+    // Get settlements the user collaborates on
+    const collaborationsQuery = query(
+      collection(db, 'settlement_collaborations_v2'),
+      where('userId', '==', userId),
+      where('status', '==', 'active')
+    );
+    
+    const collaborationsSnapshot = await getDocs(collaborationsQuery);
+    const collaboratedSettlements: SettlementV2[] = [];
+    
+    // For each collaboration, get the settlement
+    for (const collabDoc of collaborationsSnapshot.docs) {
+      const collab = collabDoc.data();
+      try {
+        const settlement = await this.getSettlement(collab.settlementId);
+        if (settlement) {
+          collaboratedSettlements.push(settlement);
+        }
+      } catch (error) {
+        console.warn(`Failed to load settlement ${collab.settlementId}:`, error);
+      }
+    }
+    
+    // Combine and deduplicate (in case user owns and collaborates on same settlement)
+    const allSettlements = [...ownedSettlements];
+    for (const settlement of collaboratedSettlements) {
+      if (!allSettlements.find(s => s.id === settlement.id)) {
+        allSettlements.push(settlement);
+      }
+    }
+    
+    // Sort by creation date (newest first)
+    return allSettlements.sort((a, b) => {
+      const aTime = this.safeToDate(a.createdAt).getTime();
+      const bTime = this.safeToDate(b.createdAt).getTime();
+      return bTime - aTime;
+    });
+  }
+
   // Project management
   async createProject(projectData: Omit<ProjectV2, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
     const projectsRef = collection(db, 'projects');
@@ -401,13 +444,16 @@ export class SettlementV2Service {
 
   // Settlement collaboration management
   async createSettlementCollaboration(collaborationData: Omit<SettlementCollaboration, 'id' | 'invitedAt'>): Promise<string> {
-    const collaborationRef = collection(db, 'settlement_collaborations_v2');
-    const collabRef = await addDoc(collaborationRef, {
+    // Use predictable ID format: userId_settlementId
+    const collaborationId = `${collaborationData.userId}_${collaborationData.settlementId}`;
+    const collabRef = doc(db, 'settlement_collaborations_v2', collaborationId);
+    
+    await setDoc(collabRef, {
       ...collaborationData,
       invitedAt: serverTimestamp()
     });
     
-    return collabRef.id;
+    return collaborationId;
   }
 
   async getSettlementCollaborators(settlementId: string): Promise<SettlementCollaboration[]> {
@@ -506,6 +552,7 @@ export class SettlementV2Service {
 
     if (ownerV2) {
       const owner = this.convertUserV2ToUser(ownerV2);
+      
       members.push({
         user: owner,
         collaboration: {
