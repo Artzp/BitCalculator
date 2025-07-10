@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useItemsStore } from '../state/useItemsStore';
 import { isAdmin } from '../utils/adminCheck';
@@ -6,6 +6,11 @@ import { SettlementV2Service, SettlementV2, ProjectV2, TaskV2, UserV2 } from '..
 import { SettlementMember, SettlementCollaboratorRole, SettlementInviteLink } from '../types/NormalizedDatabase';
 import { calculateMaterials } from '../utils/calculator';
 import ProjectManagementV2 from './ProjectManagementV2';
+import { TaskAssignmentInterface } from './TaskAssignmentInterface';
+import { ContributionSubmissionInterface } from './ContributionSubmissionInterface';
+import { ContributionDashboard } from './ContributionDashboard';
+import { SettlementInventoryV2 } from './SettlementInventoryV2';
+import { getPrivateDisplayName, getPrivateEmailDisplay, getMemberInitials, isValidCustomDisplayName } from '../utils/userUtils';
 
 const settlementService = new SettlementV2Service();
 
@@ -39,6 +44,16 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
   const [showJoinDialog, setShowJoinDialog] = useState<boolean>(false);
   const [showManageMembersDialog, setShowManageMembersDialog] = useState<boolean>(false);
   
+  // New task assignment and contribution states
+  const [showTaskAssignmentInterface, setShowTaskAssignmentInterface] = useState<boolean>(false);
+  const [showContributionInterface, setShowContributionInterface] = useState<boolean>(false);
+  const [showContributionDashboard, setShowContributionDashboard] = useState<boolean>(false);
+  
+  // Profile settings state
+  const [showProfileSettings, setShowProfileSettings] = useState<boolean>(false);
+  const [customDisplayName, setCustomDisplayName] = useState<string>('');
+  const [profileUpdateMessage, setProfileUpdateMessage] = useState<string>('');
+  
   // Form data
   const [newSettlementName, setNewSettlementName] = useState<string>('');
   const [newProjectName, setNewProjectName] = useState<string>('');
@@ -50,6 +65,20 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
   const [inviteMessage, setInviteMessage] = useState<string>('');
   const [joinCode, setJoinCode] = useState<string>('');
   const [generatedInviteCode, setGeneratedInviteCode] = useState<string>('');
+  
+  // Task filters
+  const [taskSearchTerm, setTaskSearchTerm] = useState<string>('');
+  const [taskStatusFilter, setTaskStatusFilter] = useState<string>('all');
+  const [taskPriorityFilter, setTaskPriorityFilter] = useState<string>('all');
+  const [taskAssigneeFilter, setTaskAssigneeFilter] = useState<string>('all');
+  
+  // Task assignment tracking - map of taskId to array of selected userIds
+  const [selectedAssignees, setSelectedAssignees] = useState<{[taskId: string]: string[]}>({});
+  
+  // Assignment interface state
+  const [assignmentSearchTerm, setAssignmentSearchTerm] = useState<{[taskId: string]: string}>({});
+  const [showAssignmentInterface, setShowAssignmentInterface] = useState<{[taskId: string]: boolean}>({});
+  const [assignmentRoleFilter, setAssignmentRoleFilter] = useState<{[taskId: string]: string}>({});
 
   // Admin check
   useEffect(() => {
@@ -160,10 +189,76 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
     }
   };
 
+  // Function to update user's display name
+  const updateUserDisplayName = async (newDisplayName: string) => {
+    if (!user) return;
+    
+    try {
+      await settlementService.updateUser(user.uid, {
+        displayName: newDisplayName
+      });
+      
+      // Reload settlement members to reflect the change
+      if (currentSettlement) {
+        await loadSettlementMembers(currentSettlement.id);
+      }
+      
+      console.log(`Updated display name to: ${newDisplayName}`);
+    } catch (error) {
+      console.error('Error updating display name:', error);
+    }
+  };
+
+  // Function to update user's custom display name for privacy
+  const updateCustomDisplayName = async (newCustomDisplayName: string) => {
+    if (!user) return;
+    
+    try {
+      setProfileUpdateMessage('');
+      
+      // Validate the custom display name
+      const validation = isValidCustomDisplayName(newCustomDisplayName);
+      if (!validation.isValid) {
+        setProfileUpdateMessage(validation.error || 'Invalid display name');
+        return;
+      }
+      
+      await settlementService.updateUser(user.uid, {
+        customDisplayName: newCustomDisplayName.trim()
+      });
+      
+      // Reload user data and settlement members to reflect the change
+      const updatedUserData = await settlementService.getUser(user.uid);
+      setUserData(updatedUserData);
+      
+      if (currentSettlement) {
+        await loadSettlementMembers(currentSettlement.id);
+      }
+      
+      setProfileUpdateMessage('Display name updated successfully!');
+      setCustomDisplayName('');
+      
+      // Auto-close the dialog after 2 seconds
+      setTimeout(() => {
+        setShowProfileSettings(false);
+        setProfileUpdateMessage('');
+      }, 2000);
+      
+    } catch (error) {
+      console.error('Error updating custom display name:', error);
+      setProfileUpdateMessage('Failed to update display name. Please try again.');
+    }
+  };
+
   const handleProjectsUpdate = async () => {
     if (currentSettlement) {
       await loadProjectsForSettlement(currentSettlement.id);
     }
+  };
+
+  const handleSelectSettlement = async (settlement: SettlementV2) => {
+    setCurrentSettlement(settlement);
+    await loadProjectsForSettlement(settlement.id);
   };
 
   const handleCreateSettlement = async () => {
@@ -265,15 +360,192 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
   const handleUpdateTaskStatus = async (taskId: string, status: TaskV2['status']) => {
     try {
       await settlementService.updateTask(taskId, { status });
-      
-      // Update local state
-      setTasks(prev => prev.map(t => 
-        t.id === taskId ? { ...t, status } : t
-      ));
+      // Reload tasks to show updated status
+      if (currentSettlement) {
+        await loadProjectsForSettlement(currentSettlement.id);
+      }
     } catch (err) {
       console.error('Error updating task status:', err);
       setError('Failed to update task status');
     }
+  };
+
+  const handleAssignTask = async (taskId: string, assignedTo: string | null) => {
+    if (!user || !currentSettlement) {
+      setError('User or settlement not available');
+      return;
+    }
+
+    try {
+      // Prepare update data - never use undefined, use null for unassignment
+      const updateData: any = {
+        status: assignedTo ? 'pending' : 'pending'
+      };
+      
+      // Only include assignedTo field if we're assigning (not null/empty)
+      if (assignedTo && assignedTo.trim() !== '') {
+        updateData.assignedTo = assignedTo.trim();
+      } else {
+        // For unassignment, explicitly set to null (Firestore accepts null but not undefined)
+        updateData.assignedTo = null;
+      }
+      
+      await settlementService.updateTask(taskId, updateData);
+      // Reload tasks to show updated assignment
+      await loadProjectsForSettlement(currentSettlement.id);
+    } catch (err) {
+      console.error('Error assigning task:', err);
+      setError('Failed to assign task');
+    }
+  };
+
+  // New function to handle multiple assignee assignment from checkboxes
+  const handleAssignTaskToSelectedUsers = async (taskId: string) => {
+    if (!user || !currentSettlement) {
+      setError('User or settlement not available');
+      return;
+    }
+
+    const selectedUsers = selectedAssignees[taskId] || [];
+    
+    try {
+      const updateData: any = {};
+      
+      if (selectedUsers.length > 0) {
+        // Assign to multiple users
+        updateData.assignedTo = selectedUsers.length === 1 ? selectedUsers[0] : selectedUsers;
+      } else {
+        // Unassign (no users selected)
+        updateData.assignedTo = null;
+      }
+      
+      await settlementService.updateTask(taskId, updateData);
+      
+      // Clear the selected assignees for this task
+      setSelectedAssignees(prev => ({
+        ...prev,
+        [taskId]: []
+      }));
+      
+      // Reload tasks to show updated assignment
+      await loadProjectsForSettlement(currentSettlement.id);
+    } catch (err) {
+      console.error('Error assigning task to multiple users:', err);
+      setError('Failed to assign task');
+    }
+  };
+
+  // Toggle user selection for task assignment
+  const toggleUserSelection = (taskId: string, userId: string) => {
+    setSelectedAssignees(prev => {
+      const currentSelections = prev[taskId] || [];
+      const isSelected = currentSelections.includes(userId);
+      
+      return {
+        ...prev,
+        [taskId]: isSelected 
+          ? currentSelections.filter(id => id !== userId)
+          : [...currentSelections, userId]
+      };
+    });
+  };
+
+  // Get currently assigned users for a task (handle both string and array formats)
+  const getAssignedUsers = (task: TaskV2): string[] => {
+    if (!task.assignedTo) return [];
+    if (typeof task.assignedTo === 'string') return [task.assignedTo];
+    return task.assignedTo;
+  };
+
+  // Toggle assignment interface visibility
+  const toggleAssignmentInterface = (taskId: string) => {
+    setShowAssignmentInterface(prev => ({
+      ...prev,
+      [taskId]: !prev[taskId]
+    }));
+  };
+
+  // Get filtered users for assignment interface
+  const getFilteredUsersForAssignment = (taskId: string) => {
+    const searchTerm = assignmentSearchTerm[taskId] || '';
+    const roleFilter = assignmentRoleFilter[taskId] || 'all';
+    
+    return settlementMembers.filter(member => {
+      const userName = member.user?.displayName || member.user?.email || 'Unknown User';
+      const userRole = member.collaboration?.role || 'viewer';
+      
+      // Search filter
+      const matchesSearch = searchTerm === '' || 
+        userName.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      // Role filter
+      const matchesRole = roleFilter === 'all' || userRole === roleFilter;
+      
+      return matchesSearch && matchesRole;
+    });
+  };
+
+  // Select all filtered users for a task
+  const selectAllFilteredUsers = (taskId: string) => {
+    const filteredUsers = getFilteredUsersForAssignment(taskId);
+    const userIds = filteredUsers.map(member => member.collaboration?.userId || member.user?.id || '').filter(id => id);
+    
+    setSelectedAssignees(prev => ({
+      ...prev,
+      [taskId]: userIds
+    }));
+  };
+
+  // Clear all selected users for a task
+  const clearAllSelectedUsers = (taskId: string) => {
+    setSelectedAssignees(prev => ({
+      ...prev,
+      [taskId]: []
+    }));
+  };
+
+  // Update assignment search term
+  const updateAssignmentSearchTerm = (taskId: string, searchTerm: string) => {
+    setAssignmentSearchTerm(prev => ({
+      ...prev,
+      [taskId]: searchTerm
+    }));
+  };
+
+  // Update assignment role filter
+  const updateAssignmentRoleFilter = (taskId: string, roleFilter: string) => {
+    setAssignmentRoleFilter(prev => ({
+      ...prev,
+      [taskId]: roleFilter
+    }));
+  };
+
+  // Check if current user can assign tasks
+  const canAssignTasks = (): boolean => {
+    if (!user || !currentSettlement) return false;
+    
+    // Check if user is admin
+    if (isUserAdmin) return true;
+    
+    // Check if user is settlement owner
+    if (currentSettlement.ownerId === user.uid) return true;
+    
+    // Check if user has assignment permissions in this settlement
+    const userMember = settlementMembers.find((member) => 
+      (member.collaboration?.userId || member.user?.id) === user.uid
+    );
+    
+    if (userMember?.collaboration?.permissions?.canAssignTasks) {
+      return true;
+    }
+    
+    // Check role-based permissions (admin, co_owner roles can assign)
+    if (userMember?.collaboration?.role && 
+        ['admin', 'co_owner'].includes(userMember.collaboration.role)) {
+      return true;
+    }
+    
+    return false;
   };
 
   // Settlement collaboration handlers
@@ -366,7 +638,10 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
   };
 
   const handleChangeRole = async (memberId: string, settlementId: string, newRole: SettlementCollaboratorRole) => {
-    if (!user) return;
+    if (!user || !currentSettlement) {
+      setError('User or settlement not available');
+      return;
+    }
     
     try {
       const collaborationId = `${memberId}_${settlementId}`;
@@ -429,6 +704,8 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
       case 'settlements': return '🏘️';
       case 'projects': return '🏗️';
       case 'tasks': return '📋';
+      case 'assignments': return '👨‍💼';
+      case 'contributions': return '🎯';
       case 'inventory': return '📦';
       case 'users': return '👥';
       default: return '📊';
@@ -443,6 +720,71 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
       inventory: currentSettlement ? Object.keys(currentSettlement.inventory).length : 0
     };
   };
+
+  // Helper function to get inventory status for a task
+  const getInventoryStatus = (task: TaskV2) => {
+    if (!currentSettlement?.inventory || !task.metadata?.itemId || !task.metadata?.targetQuantity) {
+      return null;
+    }
+    
+    const itemId = task.metadata.itemId;
+    const needed = parseInt(task.metadata.targetQuantity.toString()) || 0;
+    const inventoryItem = currentSettlement.inventory[itemId];
+    const available = inventoryItem ? (inventoryItem.quantity - (inventoryItem.reservedQuantity || 0)) : 0;
+    
+    return {
+      available,
+      needed,
+      itemName: task.metadata.itemName,
+      isEnough: available >= needed,
+      shortage: Math.max(0, needed - available)
+    };
+  };
+
+  // Memoized filter function to optimize performance with large task lists
+  const filteredTasks = useMemo(() => {
+    const filtered = tasks.filter(task => {
+      // Search filter
+      const matchesSearch = taskSearchTerm === '' || 
+        task.title.toLowerCase().includes(taskSearchTerm.toLowerCase()) ||
+        task.description?.toLowerCase().includes(taskSearchTerm.toLowerCase()) ||
+        task.metadata?.itemName?.toLowerCase().includes(taskSearchTerm.toLowerCase());
+      
+      // Status filter
+      const matchesStatus = taskStatusFilter === 'all' || task.status === taskStatusFilter;
+      
+      // Priority filter
+      const matchesPriority = taskPriorityFilter === 'all' || task.priority === taskPriorityFilter;
+      
+      // Assignee filter (updated to handle multiple assignees)
+      const assignedUserIds = getAssignedUsers(task);
+      const matchesAssignee = taskAssigneeFilter === 'all' || 
+        (taskAssigneeFilter === 'unassigned' && assignedUserIds.length === 0) ||
+        (taskAssigneeFilter === 'assigned' && assignedUserIds.length > 0) ||
+        assignedUserIds.includes(taskAssigneeFilter);
+      
+      return matchesSearch && matchesStatus && matchesPriority && matchesAssignee;
+    });
+    
+    // Only log when filters actually change, not on every render
+    if (tasks.length > 0) {
+      console.log('🔍 TASKS FILTERED:', {
+        totalTasks: tasks.length,
+        filteredTasks: filtered.length,
+        filters: {
+          search: taskSearchTerm,
+          status: taskStatusFilter,
+          priority: taskPriorityFilter,
+          assignee: taskAssigneeFilter
+        }
+      });
+    }
+    
+    return filtered;
+  }, [tasks, taskSearchTerm, taskStatusFilter, taskPriorityFilter, taskAssigneeFilter]);
+
+  // Keep the function for backward compatibility but use memoized result
+  const getFilteredTasks = () => filteredTasks;
 
   // Settlement System is now available to all users
 
@@ -473,7 +815,7 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
     );
   }
 
-  const tabs = ['overview', 'settlements', 'projects', 'tasks', 'inventory', 'users'];
+  const tabs = ['overview', 'settlements', 'projects', 'tasks', 'assignments', 'contributions', 'inventory', 'users'];
   const tabCounts = getTabCounts();
 
   return (
@@ -495,6 +837,14 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
             </div>
             <div className="text-sm text-purple-100">
               {projects.length} Project{projects.length !== 1 ? 's' : ''}
+            </div>
+            <div className="mt-2">
+              <button
+                onClick={() => setShowProfileSettings(true)}
+                className="px-3 py-1 bg-white bg-opacity-20 text-white rounded-lg hover:bg-opacity-30 transition-colors text-sm"
+              >
+                👤 Profile Settings
+              </button>
             </div>
           </div>
         </div>
@@ -690,7 +1040,7 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
                         </div>
                         <div className="flex gap-2">
                           <button 
-                            onClick={() => setCurrentSettlement(settlement)}
+                            onClick={() => handleSelectSettlement(settlement)}
                             className={`px-3 py-1 rounded text-sm ${
                               currentSettlement?.id === settlement.id
                                 ? 'bg-purple-500 text-white'
@@ -777,23 +1127,119 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
         {activeView === 'tasks' && (
           <div className="space-y-6">
             <div className="bg-white rounded-xl p-6 shadow-lg border border-slate-200">
-              <h2 className="text-xl font-bold mb-4">📋 Tasks</h2>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold">📋 Tasks</h2>
+                <div className="text-sm text-gray-600">
+                  {getFilteredTasks().length} of {tasks.length} tasks
+                  {/* Cache buster v2.0 - Enhanced with filters and inventory */}
+                </div>
+              </div>
+              
+              {/* Filter Controls */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
+                  <input
+                    type="text"
+                    value={taskSearchTerm}
+                    onChange={(e) => setTaskSearchTerm(e.target.value)}
+                    placeholder="Search tasks..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                  <select
+                    value={taskStatusFilter}
+                    onChange={(e) => setTaskStatusFilter(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  >
+                    <option value="all">All Status</option>
+                    <option value="pending">Pending</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="completed">Completed</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                  <select
+                    value={taskPriorityFilter}
+                    onChange={(e) => setTaskPriorityFilter(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  >
+                    <option value="all">All Priority</option>
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Assignment</label>
+                  <select
+                    value={taskAssigneeFilter}
+                    onChange={(e) => setTaskAssigneeFilter(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  >
+                    <option value="all">All Tasks</option>
+                    <option value="unassigned">Unassigned</option>
+                    <option value="assigned">Assigned</option>
+                    {settlementMembers.map(member => (
+                      <option key={member.collaboration?.userId || member.user?.id} value={member.collaboration?.userId || member.user?.id}>
+                        {member.user?.displayName || member.user?.email || 'Unknown User'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
               
               {tasks.length === 0 ? (
                 <div className="text-gray-500 text-center py-8">
                   No tasks found. Create projects and add tasks to get started!
                 </div>
+              ) : getFilteredTasks().length === 0 ? (
+                <div className="text-gray-500 text-center py-8">
+                  No tasks match the current filters. Try adjusting your search criteria.
+                </div>
               ) : (
                 <div className="space-y-4">
-                  {tasks.map((task) => {
+                  {getFilteredTasks().map((task) => {
                     const project = projects.find(p => p.id === task.projectId);
+                    const inventoryStatus = getInventoryStatus(task);
+                    const assignedUserIds = getAssignedUsers(task);
+                    const assignedMembers = settlementMembers.filter(m => 
+                      assignedUserIds.includes(m.collaboration?.userId || m.user?.id || '')
+                    );
+                    
                     return (
-                      <div key={task.id} className="border border-gray-200 rounded-lg p-4">
+                      <div key={task.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                         <div className="flex justify-between items-start">
                           <div className="flex-1">
-                            <h3 className="text-lg font-semibold">{task.title}</h3>
-                            <p className="text-gray-600 text-sm mb-2">{task.description}</p>
-                            <div className="flex gap-2 mb-2">
+                            <h3 className="text-lg font-semibold mb-1">{task.title}</h3>
+                            
+                            {/* Inventory Status Display */}
+                            {inventoryStatus && (
+                              <div className={`text-sm px-3 py-1 rounded mb-2 inline-block ${
+                                inventoryStatus.isEnough 
+                                  ? 'bg-green-100 text-green-700 border border-green-200' 
+                                  : 'bg-red-100 text-red-700 border border-red-200'
+                              }`}>
+                                📦 Inventory: {inventoryStatus.available}/{inventoryStatus.needed} available
+                                {inventoryStatus.isEnough ? (
+                                  <span className="font-medium"> ✅ Ready to complete</span>
+                                ) : (
+                                  <span className="font-medium"> • Need {inventoryStatus.shortage} more</span>
+                                )}
+                              </div>
+                            )}
+                            
+                            {task.description && (
+                              <p className="text-gray-600 text-sm mb-2">{task.description}</p>
+                            )}
+                            
+                            <div className="flex flex-wrap gap-2 mb-2">
                               <span className={`px-2 py-1 text-xs rounded ${getStatusColor(task.status)}`}>
                                 {task.status.replace('_', ' ')}
                               </span>
@@ -803,8 +1249,145 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
                               <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
                                 {project?.name || 'Unknown Project'}
                               </span>
+                              {assignedMembers.length > 0 ? (
+                                assignedMembers.map((member, index) => (
+                                  <span key={index} className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded">
+                                    👤 {member.user?.displayName || member.user?.email || 'Unknown User'}
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
+                                  Unassigned
+                                </span>
+                              )}
                             </div>
-                            <div className="text-xs text-gray-500">
+                            
+                            {/* User Assignment Interface */}
+                            {canAssignTasks() && (
+                              <div className="mt-3 p-3 bg-gray-50 rounded-lg border">
+                                <div className="flex justify-between items-center mb-2">
+                                  <h4 className="text-sm font-medium text-gray-700">
+                                    Assign to Users ({settlementMembers.length} available)
+                                  </h4>
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={() => toggleAssignmentInterface(task.id)}
+                                      className="px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm hover:bg-gray-300"
+                                    >
+                                      {showAssignmentInterface[task.id] ? 'Hide' : 'Show'} Users
+                                    </button>
+                                    <button
+                                      onClick={() => handleAssignTaskToSelectedUsers(task.id)}
+                                      disabled={(selectedAssignees[task.id] || []).length === 0}
+                                      className={`px-3 py-1 rounded text-sm font-medium ${
+                                        (selectedAssignees[task.id] || []).length > 0
+                                          ? 'bg-blue-500 text-white hover:bg-blue-600'
+                                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                      }`}
+                                    >
+                                      Assign ({(selectedAssignees[task.id] || []).length})
+                                    </button>
+                                  </div>
+                                </div>
+                                
+                                {showAssignmentInterface[task.id] && (
+                                  <div className="space-y-3">
+                                    {/* Search and Filter Controls */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                      <div>
+                                        <input
+                                          type="text"
+                                          placeholder="Search users..."
+                                          value={assignmentSearchTerm[task.id] || ''}
+                                          onChange={(e) => updateAssignmentSearchTerm(task.id, e.target.value)}
+                                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                        />
+                                      </div>
+                                      <div>
+                                        <select
+                                          value={assignmentRoleFilter[task.id] || 'all'}
+                                          onChange={(e) => updateAssignmentRoleFilter(task.id, e.target.value)}
+                                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                        >
+                                          <option value="all">All Roles</option>
+                                          <option value="owner">Owner</option>
+                                          <option value="co_owner">Co-Owner</option>
+                                          <option value="admin">Admin</option>
+                                          <option value="contributor">Contributor</option>
+                                          <option value="viewer">Viewer</option>
+                                        </select>
+                                      </div>
+                                    </div>
+                                    
+                                    {/* Quick Actions */}
+                                    <div className="flex gap-2 flex-wrap">
+                                      <button
+                                        onClick={() => selectAllFilteredUsers(task.id)}
+                                        className="px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600"
+                                      >
+                                        Select All Filtered
+                                      </button>
+                                      <button
+                                        onClick={() => clearAllSelectedUsers(task.id)}
+                                        className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
+                                      >
+                                        Clear All
+                                      </button>
+                                      <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded text-sm">
+                                        {getFilteredUsersForAssignment(task.id).length} users shown
+                                      </span>
+                                    </div>
+                                    
+                                    {/* User List */}
+                                    <div className="max-h-60 overflow-y-auto border border-gray-200 rounded">
+                                      {getFilteredUsersForAssignment(task.id).length === 0 ? (
+                                        <div className="p-4 text-center text-gray-500">
+                                          No users match the current filters
+                                        </div>
+                                      ) : (
+                                        <div className="divide-y divide-gray-200">
+                                          {getFilteredUsersForAssignment(task.id).map((member) => {
+                                            const userId = member.collaboration?.userId || member.user?.id || '';
+                                            const isSelected = (selectedAssignees[task.id] || []).includes(userId);
+                                            const isCurrentlyAssigned = assignedUserIds.includes(userId);
+                                            const userRole = member.collaboration?.role || 'viewer';
+                                            
+                                            return (
+                                              <label 
+                                                key={userId}
+                                                className={`flex items-center p-3 cursor-pointer hover:bg-gray-100 ${
+                                                  isSelected ? 'bg-blue-50' : ''
+                                                } ${isCurrentlyAssigned ? 'bg-purple-50' : ''}`}
+                                              >
+                                                <input
+                                                  type="checkbox"
+                                                  checked={isSelected}
+                                                  onChange={() => toggleUserSelection(task.id, userId)}
+                                                  className="mr-3"
+                                                />
+                                                <div className="flex-1 min-w-0">
+                                                  <div className={`text-sm ${isCurrentlyAssigned ? 'font-semibold text-purple-700' : 'text-gray-900'}`}>
+                                                    {member.user?.displayName || member.user?.email || 'Unknown User'}
+                                                    {isCurrentlyAssigned && (
+                                                      <span className="ml-2 text-xs text-purple-600">(currently assigned)</span>
+                                                    )}
+                                                  </div>
+                                                  <div className="text-xs text-gray-500 capitalize">
+                                                    {userRole.replace('_', ' ')}
+                                                  </div>
+                                                </div>
+                                              </label>
+                                            );
+                                          })}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            
+                            <div className="text-xs text-gray-500 mt-2">
                               Created: {task.createdAt?.toDate?.()?.toLocaleDateString() || 'Unknown'}
                             </div>
                           </div>
@@ -812,7 +1395,7 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
                             <select 
                               value={task.status}
                               onChange={(e) => handleUpdateTaskStatus(task.id, e.target.value as TaskV2['status'])}
-                              className="px-2 py-1 border border-gray-300 rounded text-sm"
+                              className="px-2 py-1 border border-gray-300 rounded text-sm hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                             >
                               <option value="pending">Pending</option>
                               <option value="in_progress">In Progress</option>
@@ -831,46 +1414,28 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
 
         {activeView === 'inventory' && (
           <div className="space-y-6">
-            <div className="bg-white rounded-xl p-6 shadow-lg border border-slate-200">
-              <h2 className="text-xl font-bold mb-4">📦 Inventory</h2>
-              
-              {!currentSettlement ? (
-                <div className="text-gray-500 text-center py-8">
-                  Please select a settlement first to view inventory.
+            {/* Important Notice about Inventory Separation */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  <div className="text-blue-400 text-xl">ℹ️</div>
                 </div>
-              ) : Object.keys(currentSettlement.inventory).length === 0 ? (
-                <div className="text-gray-500 text-center py-8">
-                  No items in inventory yet.
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-blue-800">Settlement vs Personal Inventory</h3>
+                  <div className="mt-2 text-sm text-blue-700">
+                    <p className="mb-2">
+                      <strong>This is your settlement's shared inventory</strong> - separate from your personal inventory used in the BitCalculator.
+                    </p>
+                    <ul className="list-disc list-inside space-y-1">
+                      <li><strong>Settlement Inventory:</strong> Shared with all settlement members, used for collaborative projects</li>
+                      <li><strong>Personal Inventory:</strong> Your private inventory in the BitCalculator, not shared with others</li>
+                    </ul>
+                  </div>
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  {Object.entries(currentSettlement.inventory).map(([itemId, inventoryItem]) => (
-                    <div key={itemId} className="border border-gray-200 rounded-lg p-4">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <h3 className="text-lg font-semibold">{items[itemId]?.name || itemId}</h3>
-                          <div className="flex gap-2 mt-1">
-                            <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">
-                              {inventoryItem.quantity} available
-                            </span>
-                            {inventoryItem.reservedQuantity > 0 && (
-                              <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded">
-                                {inventoryItem.reservedQuantity} reserved
-                              </span>
-                            )}
-                            {inventoryItem.storageLocation && (
-                              <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
-                                📍 {inventoryItem.storageLocation}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+              </div>
             </div>
+
+            <SettlementInventoryV2 currentSettlement={currentSettlement} />
           </div>
         )}
 
@@ -880,6 +1445,13 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-bold">👥 Settlement Members</h2>
                 <div className="flex gap-2">
+                  <button
+                    onClick={() => updateUserDisplayName('Artzp')}
+                    className="px-3 py-1 bg-purple-500 text-white rounded hover:bg-purple-600 text-sm"
+                    title="Update your display name to Artzp for privacy"
+                  >
+                    🔒 Set Display Name to Artzp
+                  </button>
                   <button
                     onClick={() => setShowInviteDialog(true)}
                     className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
@@ -922,11 +1494,11 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
                         <div className="flex justify-between items-start">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-400 to-blue-400 flex items-center justify-center text-white font-semibold">
-                              {member.user.displayName?.[0]?.toUpperCase() || member.user.email?.[0]?.toUpperCase() || '?'}
+                              {getMemberInitials(member)}
                             </div>
                             <div>
-                              <h3 className="font-semibold">{member.user.displayName || member.user.email || 'Unknown User'}</h3>
-                              <p className="text-sm text-gray-600">{member.user.email || 'No email'}</p>
+                              <h3 className="font-semibold">{getPrivateDisplayName(member, user?.uid)}</h3>
+                              <p className="text-sm text-gray-600">{getPrivateEmailDisplay(member, user?.uid)}</p>
                               <div className="flex items-center gap-2 mt-1">
                                 <span className={`px-2 py-1 rounded text-xs font-medium ${
                                   member.isOwner ? 'bg-purple-100 text-purple-800' :
@@ -951,16 +1523,20 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
                             <div className="flex items-center gap-2">
                               <select
                                 value={member.collaboration.role}
-                                onChange={(e) => handleChangeRole(member.collaboration.userId || member.user.id, currentSettlement.id, e.target.value as SettlementCollaboratorRole)}
+                                onChange={(e) => {
+                                  if (currentSettlement) {
+                                    handleChangeRole(member.collaboration.userId || member.user.id, currentSettlement.id, e.target.value as SettlementCollaboratorRole);
+                                  }
+                                }}
                                 className="text-sm border border-gray-300 rounded px-2 py-1"
-                                disabled={user.uid !== currentSettlement.ownerId}
+                                disabled={!user || !currentSettlement || user.uid !== currentSettlement.ownerId}
                               >
                                 <option value="viewer">Viewer</option>
                                 <option value="contributor">Contributor</option>
                                 <option value="admin">Admin</option>
                               </select>
                               
-                              {user.uid === currentSettlement.ownerId && (
+                              {user && currentSettlement && user.uid === currentSettlement.ownerId && (
                                 <button
                                   onClick={() => {
                                     console.log('DEBUG: Member data for removal:', {
@@ -970,7 +1546,9 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
                                       collaborationId: member.collaboration?.id,
                                       finalId: member.collaboration?.userId || member.user?.id
                                     });
-                                    handleRemoveMember(member.collaboration?.userId || member.user?.id, currentSettlement.id);
+                                    if (currentSettlement) {
+                                      handleRemoveMember(member.collaboration?.userId || member.user?.id, currentSettlement.id);
+                                    }
                                   }}
                                   className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
                                 >
@@ -1003,7 +1581,161 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
             </div>
           </div>
         )}
+
+        {/* Assignments Tab */}
+        {activeView === 'assignments' && (
+          <div className="bg-white rounded-xl p-6 shadow-lg border border-slate-200">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold">👨‍💼 Task Assignments</h2>
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => setShowTaskAssignmentInterface(true)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  🎯 Assign Tasks
+                </button>
+                <button
+                  onClick={() => setShowContributionDashboard(true)}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                >
+                  📊 View Dashboard
+                </button>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <h3 className="font-semibold text-blue-800 mb-3">🎯 For Admins</h3>
+                <ul className="text-blue-700 text-sm space-y-2">
+                  <li>• Assign tasks to multiple settlement members</li>
+                  <li>• Set deadlines and requirements</li>
+                  <li>• Track assignment progress</li>
+                  <li>• Manage workload distribution</li>
+                </ul>
+                <button
+                  onClick={() => setShowTaskAssignmentInterface(true)}
+                  className="mt-3 w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
+                >
+                  Open Assignment Interface
+                </button>
+              </div>
+              
+              <div className="bg-green-50 p-4 rounded-lg">
+                <h3 className="font-semibold text-green-800 mb-3">📈 Progress Tracking</h3>
+                <ul className="text-green-700 text-sm space-y-2">
+                  <li>• View all contributions and submissions</li>
+                  <li>• Approve or reject member work</li>
+                  <li>• See contribution leaderboards</li>
+                  <li>• Track project completion rates</li>
+                </ul>
+                <button
+                  onClick={() => setShowContributionDashboard(true)}
+                  className="mt-3 w-full px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
+                >
+                  Open Contribution Dashboard
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <h3 className="font-semibold text-yellow-800 mb-2">💡 How Task Assignments Work</h3>
+              <p className="text-yellow-700 text-sm">
+                Admins can assign specific tasks to settlement members. Members receive their assignments 
+                and can submit their progress through the contribution system. This enables better 
+                collaboration on large projects like town upgrades where multiple people need to 
+                contribute different materials.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Contributions Tab */}
+        {activeView === 'contributions' && (
+          <div className="bg-white rounded-xl p-6 shadow-lg border border-slate-200">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold">🎯 My Contributions</h2>
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => setShowContributionInterface(true)}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  📤 Submit Work
+                </button>
+                <button
+                  onClick={() => setShowContributionDashboard(true)}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                >
+                  📊 View Dashboard
+                </button>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-green-50 p-4 rounded-lg">
+                <h3 className="font-semibold text-green-800 mb-3">📤 Submit Your Work</h3>
+                <ul className="text-green-700 text-sm space-y-2">
+                  <li>• View your assigned tasks</li>
+                  <li>• Submit completed materials</li>
+                  <li>• Track your contribution progress</li>
+                  <li>• Add notes and proof of work</li>
+                </ul>
+                <button
+                  onClick={() => setShowContributionInterface(true)}
+                  className="mt-3 w-full px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
+                >
+                  Submit Contributions
+                </button>
+              </div>
+              
+              <div className="bg-purple-50 p-4 rounded-lg">
+                <h3 className="font-semibold text-purple-800 mb-3">📊 View Statistics</h3>
+                <ul className="text-purple-700 text-sm space-y-2">
+                  <li>• See contribution leaderboards</li>
+                  <li>• View settlement-wide progress</li>
+                  <li>• Track approval status</li>
+                  <li>• Monitor project completion</li>
+                </ul>
+                <button
+                  onClick={() => setShowContributionDashboard(true)}
+                  className="mt-3 w-full px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 text-sm"
+                >
+                  View Dashboard
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h3 className="font-semibold text-blue-800 mb-2">🚀 Contribution Process</h3>
+              <div className="text-blue-700 text-sm space-y-1">
+                <p><strong>1.</strong> Get assigned tasks from settlement admins</p>
+                <p><strong>2.</strong> Work on gathering/crafting the required materials</p>
+                <p><strong>3.</strong> Submit your completed work with quantities and notes</p>
+                <p><strong>4.</strong> Wait for admin approval (if required)</p>
+                <p><strong>5.</strong> See your contributions reflected in project progress</p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* New Modal Components */}
+              {showTaskAssignmentInterface && (
+          <TaskAssignmentInterface 
+            onClose={() => setShowTaskAssignmentInterface(false)} 
+            currentSettlement={currentSettlement}
+            tasks={tasks}
+            projects={projects}
+            settlementMembers={settlementMembers}
+          />
+        )}
+
+      {showContributionInterface && (
+        <ContributionSubmissionInterface onClose={() => setShowContributionInterface(false)} />
+      )}
+
+      {showContributionDashboard && (
+        <ContributionDashboard onClose={() => setShowContributionDashboard(false)} />
+      )}
 
       {/* Create Settlement Modal */}
       {showCreateSettlement && (
@@ -1265,6 +1997,84 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
                 onClick={() => {
                   setShowJoinDialog(false);
                   setJoinCode('');
+                }}
+                className="flex-1 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Profile Settings Modal */}
+      {showProfileSettings && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 shadow-2xl max-w-md w-full mx-4">
+            <h3 className="text-xl font-bold mb-4">👤 Profile Settings</h3>
+            <div className="space-y-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="font-semibold text-blue-800 mb-2">🔒 Privacy Settings</h4>
+                <p className="text-blue-700 text-sm">
+                  Set a custom display name to protect your privacy. Other users will see this name instead of your real name.
+                </p>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Current Display Name
+                </label>
+                <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-600">
+                  {userData?.customDisplayName || userData?.displayName || 'Not set'}
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  New Display Name
+                </label>
+                <input
+                  type="text"
+                  value={customDisplayName}
+                  onChange={(e) => setCustomDisplayName(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter your preferred display name (e.g., Artzp)"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  This name will be shown to other settlement members instead of your real name.
+                </p>
+              </div>
+              
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                <p className="text-green-700 text-sm">
+                  ✅ <strong>Privacy Protection:</strong> Your email will be hidden from other users and only visible to you.
+                </p>
+              </div>
+              
+              {profileUpdateMessage && (
+                <div className={`border rounded-lg p-3 ${
+                  profileUpdateMessage.includes('successfully') 
+                    ? 'bg-green-50 border-green-200 text-green-700' 
+                    : 'bg-red-50 border-red-200 text-red-700'
+                }`}>
+                  {profileUpdateMessage}
+                </div>
+              )}
+            </div>
+            
+            <div className="flex gap-2 mt-6">
+              <button
+                onClick={() => updateCustomDisplayName(customDisplayName)}
+                className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                disabled={!customDisplayName.trim()}
+              >
+                Update Display Name
+              </button>
+              <button
+                onClick={() => {
+                  setShowProfileSettings(false);
+                  setCustomDisplayName('');
+                  setProfileUpdateMessage('');
                 }}
                 className="flex-1 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
               >

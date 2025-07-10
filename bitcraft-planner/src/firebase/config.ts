@@ -2,8 +2,8 @@ import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
+// ✅ PRODUCTION VERSION - BitCraft Production Project
 // Your Firebase configuration
-// Real configuration values from Firebase project
 const firebaseConfig = {
   apiKey: "AIzaSyDyMcx_SnoPo6GuHnOFmxQJilD1pUwSvt8",
   authDomain: "bitcraftcalculator.firebaseapp.com",

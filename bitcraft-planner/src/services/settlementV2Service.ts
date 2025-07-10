@@ -18,7 +18,7 @@ import {
   arrayRemove,
   writeBatch
 } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import { db, auth } from '../firebase/config';
 import { SettlementCollaboration, SettlementCollaboratorRole, SettlementCollaborationPermissions, SettlementInviteLink, SettlementMember, User } from '../types/NormalizedDatabase';
 
 // New database structure interfaces
@@ -27,6 +27,8 @@ export interface UserV2 {
   email: string;
   displayName: string;
   photoURL?: string;
+  username?: string; // Game username/nickname that other players see
+  customDisplayName?: string; // Custom display name for privacy
   createdAt: Timestamp;
   lastSignIn: Timestamp;
   defaultSettlementId?: string;
@@ -92,7 +94,7 @@ export interface ProjectV2 {
 export interface TaskV2 {
   id: string;
   projectId: string;
-  assignedTo?: string;
+  assignedTo?: string | string[]; // Support both single string (legacy) and array of user IDs
   title: string;
   description: string;
   status: 'pending' | 'in_progress' | 'completed';
@@ -109,6 +111,31 @@ export interface TaskV2 {
     buildingRequirement?: string;
     [key: string]: any;
   };
+}
+
+export interface TaskContributionV2 {
+  id: string;
+  userId: string;
+  taskId: string;
+  settlementId: string;
+  itemsContributed: Array<{
+    itemId: string;
+    itemName: string;
+    quantity: number;
+  }>;
+  submissionDate: Timestamp;
+  status: 'pending' | 'approved' | 'rejected';
+  notes?: string;
+  proofOfWork?: string;
+  submittedBy: {
+    displayName: string;
+    email: string;
+  };
+  approvedBy?: string;
+  approvedAt?: Timestamp;
+  rejectedBy?: string;
+  rejectedAt?: Timestamp;
+  rejectionReason?: string;
 }
 
 export interface ProjectCollaboratorV2 {
@@ -188,7 +215,7 @@ export class SettlementV2Service {
     const userSnap = await getDoc(userRef);
     
     if (userSnap.exists()) {
-      return userSnap.data() as UserV2;
+      return { id: userSnap.id, ...userSnap.data() } as UserV2;
     }
     return null;
   }
@@ -199,6 +226,36 @@ export class SettlementV2Service {
       ...updates,
       lastSignIn: serverTimestamp()
     });
+  }
+
+  async ensureUserExists(userId: string, userInfo: { email: string; displayName?: string; photoURL?: string }): Promise<UserV2> {
+    // First check if user already exists
+    const existingUser = await this.getUser(userId);
+    if (existingUser) {
+      // Update last sign in time
+      await this.updateUser(userId, {});
+      return existingUser;
+    }
+
+    // Create new user with initial username based on display name or email
+    const username = userInfo.displayName || userInfo.email?.split('@')[0] || 'User';
+    
+    const newUserData: Omit<UserV2, 'id' | 'createdAt' | 'lastSignIn'> = {
+      email: userInfo.email,
+      displayName: userInfo.displayName || '',
+      photoURL: userInfo.photoURL,
+      username: username,
+      preferences: {
+        theme: 'light',
+        notifications: true
+      }
+    };
+
+    await this.createUser(userId, newUserData);
+    
+    // Return the newly created user
+    const createdUser = await this.getUser(userId);
+    return createdUser!;
   }
 
   // Settlement management
@@ -365,7 +422,7 @@ export class SettlementV2Service {
 
   // Task management
   async createTask(taskData: Omit<TaskV2, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
-    const tasksRef = collection(db, 'tasks');
+    const tasksRef = collection(db, 'tasks_v2');
     const taskRef = await addDoc(tasksRef, {
       ...taskData,
       createdAt: serverTimestamp(),
@@ -376,7 +433,7 @@ export class SettlementV2Service {
   }
 
   async getTask(taskId: string): Promise<TaskV2 | null> {
-    const taskRef = doc(db, 'tasks', taskId);
+    const taskRef = doc(db, 'tasks_v2', taskId);
     const taskSnap = await getDoc(taskRef);
     
     if (taskSnap.exists()) {
@@ -386,21 +443,30 @@ export class SettlementV2Service {
   }
 
   async updateTask(taskId: string, updates: Partial<TaskV2>): Promise<void> {
-    const taskRef = doc(db, 'tasks', taskId);
+    const taskRef = doc(db, 'tasks_v2', taskId);
+    
+    // Filter out undefined values to prevent Firestore errors
+    const cleanUpdates: any = {};
+    for (const [key, value] of Object.entries(updates)) {
+      if (value !== undefined) {
+        cleanUpdates[key] = value;
+      }
+    }
+    
     await updateDoc(taskRef, {
-      ...updates,
+      ...cleanUpdates,
       updatedAt: serverTimestamp()
     });
   }
 
   async deleteTask(taskId: string): Promise<void> {
-    const taskRef = doc(db, 'tasks', taskId);
+    const taskRef = doc(db, 'tasks_v2', taskId);
     await deleteDoc(taskRef);
   }
 
   async getTasksByProject(projectId: string): Promise<TaskV2[]> {
     const q = query(
-      collection(db, 'tasks'),
+      collection(db, 'tasks_v2'),
       where('projectId', '==', projectId),
       orderBy('createdAt', 'desc')
     );
@@ -409,9 +475,59 @@ export class SettlementV2Service {
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TaskV2));
   }
 
+  // Public method to refresh all task progress based on current inventory
+  async refreshTaskProgressFromInventory(settlementId: string): Promise<void> {
+    console.log('🔄 REFRESHING ALL TASK PROGRESS FROM INVENTORY');
+    await this.updateAllTaskProgressFromInventory(settlementId);
+  }
+
+  // Public method to add items directly to settlement inventory
+  async addItemsToInventory(settlementId: string, items: Array<{itemId?: string, itemName: string, quantity: number}>): Promise<void> {
+    try {
+      console.log('📦 ADDING ITEMS TO INVENTORY:', { settlementId, items });
+
+      const settlement = await this.getSettlement(settlementId);
+      if (!settlement) {
+        throw new Error(`Settlement ${settlementId} not found`);
+      }
+
+      const updatedInventory = { ...settlement.inventory };
+      
+      for (const item of items) {
+        const itemKey = item.itemId || item.itemName;
+        
+        if (updatedInventory[itemKey]) {
+          updatedInventory[itemKey].quantity += item.quantity;
+          updatedInventory[itemKey].lastUpdated = serverTimestamp() as any;
+        } else {
+          updatedInventory[itemKey] = {
+            quantity: item.quantity,
+            reservedQuantity: 0,
+            lastUpdated: serverTimestamp() as any
+          };
+        }
+        
+        console.log(`📦 Added ${item.quantity}x ${item.itemName} to inventory`);
+      }
+
+      await this.updateSettlement(settlementId, {
+        inventory: updatedInventory
+      });
+
+      // Auto-update all tasks after inventory change
+      await this.updateAllTaskProgressFromInventory(settlementId);
+
+      console.log('✅ Items added to inventory and tasks updated');
+
+    } catch (error) {
+      console.error('❌ ERROR adding items to inventory:', error);
+      throw error;
+    }
+  }
+
   async getTasksByAssignee(assigneeId: string): Promise<TaskV2[]> {
     const q = query(
-      collection(db, 'tasks'),
+      collection(db, 'tasks_v2'),
       where('assignedTo', '==', assigneeId),
       orderBy('createdAt', 'desc')
     );
@@ -420,15 +536,318 @@ export class SettlementV2Service {
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TaskV2));
   }
 
-  // Collaboration management
+  // Task Contributions
+  async createTaskContribution(contributionData: Omit<TaskContributionV2, 'id' | 'submissionDate'>): Promise<string> {
+    const contributionRef = collection(db, 'task_contributions_v2');
+    const docRef = await addDoc(contributionRef, {
+      ...contributionData,
+      submissionDate: serverTimestamp()
+    });
+    return docRef.id;
+  }
+
+  async getTaskContribution(contributionId: string): Promise<TaskContributionV2 | null> {
+    const contributionRef = doc(db, 'task_contributions_v2', contributionId);
+    const contributionSnap = await getDoc(contributionRef);
+    
+    if (contributionSnap.exists()) {
+      return { id: contributionSnap.id, ...contributionSnap.data() } as TaskContributionV2;
+    }
+    return null;
+  }
+
+  async updateTaskContribution(contributionId: string, updates: Partial<TaskContributionV2>): Promise<void> {
+    const contributionRef = doc(db, 'task_contributions_v2', contributionId);
+    await updateDoc(contributionRef, updates);
+  }
+
+  async getTaskContributionsByTask(taskId: string): Promise<TaskContributionV2[]> {
+    const q = query(
+      collection(db, 'task_contributions_v2'),
+      where('taskId', '==', taskId),
+      orderBy('submissionDate', 'desc')
+    );
+    
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TaskContributionV2));
+  }
+
+  async getTaskContributionsByUser(userId: string): Promise<TaskContributionV2[]> {
+    const q = query(
+      collection(db, 'task_contributions_v2'),
+      where('userId', '==', userId),
+      orderBy('submissionDate', 'desc')
+    );
+    
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TaskContributionV2));
+  }
+
+  async getTaskContributionsBySettlement(settlementId: string): Promise<TaskContributionV2[]> {
+    try {
+      // Try optimized query with index
+      const q = query(
+        collection(db, 'task_contributions_v2'),
+        where('settlementId', '==', settlementId),
+        orderBy('submissionDate', 'desc')
+      );
+      
+      const querySnapshot = await getDocs(q);
+      return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TaskContributionV2));
+    } catch (error: any) {
+      // Fallback for missing index - query without orderBy and sort in memory
+      if (error.code === 'failed-precondition' || error.message?.includes('index')) {
+        console.log('Using fallback query for task contributions (index building...)');
+        
+        const simpleQuery = query(
+          collection(db, 'task_contributions_v2'),
+          where('settlementId', '==', settlementId)
+        );
+        
+        const querySnapshot = await getDocs(simpleQuery);
+        const contributions = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TaskContributionV2));
+        
+        // Sort in memory by submission date
+        return contributions.sort((a, b) => {
+          const dateA = this.safeToDate(a.submissionDate);
+          const dateB = this.safeToDate(b.submissionDate);
+          return dateB.getTime() - dateA.getTime();
+        });
+      }
+      throw error;
+    }
+  }
+
+  async approveTaskContribution(contributionId: string, approvedBy: string): Promise<void> {
+    // Get the contribution details first
+    const contribution = await this.getTaskContribution(contributionId);
+    if (!contribution) {
+      throw new Error('Contribution not found');
+    }
+
+    // Update contribution status
+    const contributionRef = doc(db, 'task_contributions_v2', contributionId);
+    await updateDoc(contributionRef, {
+      status: 'approved',
+      approvedBy,
+      approvedAt: serverTimestamp()
+    });
+
+    // Add contributed items to settlement inventory
+    await this.updateSettlementInventoryFromContribution(contribution);
+    
+    // Auto-update all tasks based on new inventory levels
+    await this.updateAllTaskProgressFromInventory(contribution.settlementId);
+  }
+
+  private async updateSettlementInventoryFromContribution(contribution: TaskContributionV2): Promise<void> {
+    try {
+      console.log('📦 UPDATING INVENTORY FROM CONTRIBUTION:', {
+        contributionId: contribution.id,
+        settlementId: contribution.settlementId,
+        itemsContributed: contribution.itemsContributed
+      });
+
+      // Get current settlement
+      const settlement = await this.getSettlement(contribution.settlementId);
+      if (!settlement) {
+        throw new Error(`Settlement ${contribution.settlementId} not found`);
+      }
+
+      // Update inventory with contributed items
+      const updatedInventory = { ...settlement.inventory };
+      
+      for (const item of contribution.itemsContributed) {
+        const itemKey = item.itemId || item.itemName; // Use itemId if available, fallback to itemName
+        
+        if (updatedInventory[itemKey]) {
+          // Item exists - add to quantity
+          updatedInventory[itemKey].quantity += item.quantity;
+          updatedInventory[itemKey].lastUpdated = serverTimestamp() as any;
+        } else {
+          // New item - create entry
+          updatedInventory[itemKey] = {
+            quantity: item.quantity,
+            reservedQuantity: 0,
+            lastUpdated: serverTimestamp() as any
+          };
+        }
+        
+        console.log(`📦 Added ${item.quantity}x ${item.itemName} to inventory`);
+      }
+
+      // Update settlement with new inventory
+      await this.updateSettlement(contribution.settlementId, {
+        inventory: updatedInventory
+      });
+
+      console.log('✅ Settlement inventory updated successfully');
+
+    } catch (error) {
+      console.error('❌ ERROR updating settlement inventory:', error);
+      throw error;
+    }
+  }
+
+  private async updateAllTaskProgressFromInventory(settlementId: string): Promise<void> {
+    try {
+      console.log('🔄 UPDATING ALL TASKS FROM INVENTORY:', { settlementId });
+
+      // Get settlement with current inventory
+      const settlement = await this.getSettlement(settlementId);
+      if (!settlement) {
+        throw new Error(`Settlement ${settlementId} not found`);
+      }
+
+      // Get all projects for this settlement
+      const projects = await this.getProjectsBySettlement(settlementId);
+      console.log(`📋 Found ${projects.length} projects to check`);
+
+      let tasksUpdated = 0;
+      let tasksCompleted = 0;
+
+      for (const project of projects) {
+        // Get all tasks for this project
+        const projectTasks = await this.getTasksByProject(project.id);
+        console.log(`📋 Project "${project.name}" has ${projectTasks.length} tasks`);
+
+        for (const task of projectTasks) {
+          const wasUpdated = await this.updateSingleTaskFromInventory(task, settlement.inventory);
+          if (wasUpdated) {
+            tasksUpdated++;
+            if (task.status === 'completed') {
+              tasksCompleted++;
+            }
+          }
+        }
+
+        // Update project progress after all tasks checked
+        await this.updateProjectProgressFromInventory(project, settlement.inventory);
+      }
+
+      console.log(`✅ INVENTORY UPDATE COMPLETE:`, {
+        tasksUpdated,
+        tasksCompleted,
+        projectsChecked: projects.length
+      });
+
+    } catch (error) {
+      console.error('❌ ERROR updating tasks from inventory:', error);
+      // Don't throw - contribution approval should still work
+    }
+  }
+
+  private async updateSingleTaskFromInventory(task: TaskV2, inventory: any): Promise<boolean> {
+    try {
+      if (!task.metadata?.itemName || !task.metadata?.targetQuantity) {
+        // Skip tasks without item requirements
+        return false;
+      }
+
+      const itemKey = task.metadata.itemId || task.metadata.itemName;
+      const availableQuantity = inventory[itemKey]?.quantity || 0;
+      const targetQuantity = task.metadata.targetQuantity;
+
+      // Calculate new progress and status
+      const newCompletedQuantity = Math.min(availableQuantity, targetQuantity);
+      let newStatus = task.status;
+
+      if (newCompletedQuantity >= targetQuantity) {
+        newStatus = 'completed';
+      } else if (newCompletedQuantity > 0) {
+        newStatus = 'in_progress';
+      } else {
+        newStatus = 'pending';
+      }
+
+      // Check if task needs updating
+      const currentCompleted = task.metadata.completedQuantity || 0;
+      if (newCompletedQuantity !== currentCompleted || newStatus !== task.status) {
+        console.log(`🔄 Updating task "${task.title}":`, {
+          item: task.metadata.itemName,
+          available: availableQuantity,
+          target: targetQuantity,
+          oldCompleted: currentCompleted,
+          newCompleted: newCompletedQuantity,
+          oldStatus: task.status,
+          newStatus
+        });
+
+        await this.updateTask(task.id, {
+          status: newStatus,
+          metadata: {
+            ...task.metadata,
+            completedQuantity: newCompletedQuantity
+          }
+        });
+
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      console.error(`❌ ERROR updating task ${task.id}:`, error);
+      return false;
+    }
+  }
+
+  private async updateProjectProgressFromInventory(project: ProjectV2, inventory: any): Promise<void> {
+    try {
+      const projectTasks = await this.getTasksByProject(project.id);
+      
+      // Calculate completion status based on tasks
+      const totalTasks = projectTasks.length;
+      const completedTasks = projectTasks.filter(task => task.status === 'completed').length;
+      
+      if (totalTasks === 0) return;
+      
+      // Determine new project status
+      let newProjectStatus = project.status;
+      if (completedTasks === totalTasks) {
+        newProjectStatus = 'completed';
+      } else if (completedTasks > 0) {
+        newProjectStatus = 'in_progress';
+      } else {
+        newProjectStatus = 'not_started';
+      }
+
+      // Update project if status changed
+      if (newProjectStatus !== project.status) {
+        await this.updateProject(project.id, {
+          status: newProjectStatus
+        });
+        
+        console.log(`📋 Project "${project.name}" status: ${project.status} → ${newProjectStatus} (${completedTasks}/${totalTasks} tasks)`);
+      }
+    } catch (error) {
+      console.error(`❌ ERROR updating project ${project.id} progress:`, error);
+    }
+  }
+
+
+
+  async rejectTaskContribution(contributionId: string, rejectedBy: string, rejectionReason: string): Promise<void> {
+    const contributionRef = doc(db, 'task_contributions_v2', contributionId);
+    await updateDoc(contributionRef, {
+      status: 'rejected',
+      rejectedBy,
+      rejectedAt: serverTimestamp(),
+      rejectionReason
+    });
+
+    // Note: We don't reverse task progress for rejected contributions
+    // This prevents gaming the system and maintains data integrity
+    console.log(`Contribution ${contributionId} rejected by ${rejectedBy}: ${rejectionReason}`);
+  }
+
+  // Project Collaborations
   async createCollaboration(collaborationData: Omit<ProjectCollaboratorV2, 'id' | 'invitedAt'>): Promise<string> {
-    const collaborationRef = collection(db, 'project_collaborators');
-    const collabRef = await addDoc(collaborationRef, {
+    const collaborationRef = collection(db, 'project_collaborators_v2');
+    const docRef = await addDoc(collaborationRef, {
       ...collaborationData,
       invitedAt: serverTimestamp()
     });
-    
-    return collabRef.id;
+    return docRef.id;
   }
 
   async getProjectCollaborators(projectId: string): Promise<ProjectCollaboratorV2[]> {
@@ -448,12 +867,37 @@ export class SettlementV2Service {
     const collaborationId = `${collaborationData.userId}_${collaborationData.settlementId}`;
     const collabRef = doc(db, 'settlement_collaborations_v2', collaborationId);
     
-    await setDoc(collabRef, {
-      ...collaborationData,
-      invitedAt: serverTimestamp()
+    // 🔍 DEBUG: Log the actual write attempt
+    console.log('🔍 DEBUG: Attempting to write collaboration:', {
+      collaborationId,
+      collection: 'settlement_collaborations_v2',
+      data: {
+        ...collaborationData,
+        invitedAt: 'serverTimestamp()'
+      },
+      currentUser: auth.currentUser?.uid,
+      documentPath: `settlement_collaborations_v2/${collaborationId}`,
+      expectedFormat: `${collaborationData.userId}_${collaborationData.settlementId}`
     });
     
-    return collaborationId;
+    try {
+      await setDoc(collabRef, {
+        ...collaborationData,
+        invitedAt: new Date() // Testing without serverTimestamp
+      });
+      
+      console.log('✅ DEBUG: Successfully created collaboration:', collaborationId);
+      return collaborationId;
+    } catch (error) {
+      console.error('❌ DEBUG: Failed to create collaboration:', {
+        error,
+        collaborationId,
+        userId: collaborationData.userId,
+        settlementId: collaborationData.settlementId,
+        currentUser: auth.currentUser?.uid
+      });
+      throw error;
+    }
   }
 
   async getSettlementCollaborators(settlementId: string): Promise<SettlementCollaboration[]> {
@@ -689,16 +1133,12 @@ export class SettlementV2Service {
     // Safe access to preferences object
     const safePreferences = userV2.preferences || {};
     
-    // Debug: Check for missing user ID
-    if (!userV2.id) {
-      console.warn('Warning: UserV2 object missing ID:', userV2);
-    }
-    
     return {
       id: userV2.id,
       email: userV2.email,
       displayName: userV2.displayName,
       photoURL: userV2.photoURL,
+      username: userV2.username, // Include the username field
       emailVerified: true, // Default value
       providerId: 'firebase', // Default value
       createdAt: this.safeToDate(userV2.createdAt),

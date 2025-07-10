@@ -1,0 +1,305 @@
+// ============================================================================
+// MIGRATION INTERFACE COMPONENT
+// ============================================================================
+// UI component for managing database migration process
+// Provides migration execution, monitoring, and rollback capabilities
+// ============================================================================
+
+import React, { useState, useEffect } from 'react';
+import { User } from 'firebase/auth';
+import { MigrationService } from '../services/migrationService';
+import { 
+  MigrationStatus, 
+  MigrationStats, 
+  MigrationResult 
+} from '../types/NormalizedDatabase';
+
+interface MigrationInterfaceProps {
+  user: User;
+  onMigrationComplete: () => void;
+}
+
+const MigrationInterface: React.FC<MigrationInterfaceProps> = ({ 
+  user, 
+  onMigrationComplete 
+}) => {
+  const [migrationStatus, setMigrationStatus] = useState<MigrationStatus | null>(null);
+  const [migrationStats, setMigrationStats] = useState<MigrationStats | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [logs, setLogs] = useState<string[]>([]);
+
+  // ========================================================================
+  // MIGRATION STATUS MONITORING
+  // ========================================================================
+
+  useEffect(() => {
+    loadMigrationStatus();
+  }, []);
+
+  const loadMigrationStatus = async () => {
+    try {
+      const migrationService = new MigrationService();
+      const status = await migrationService.getMigrationStatus();
+      setMigrationStatus(status);
+      
+      const stats = migrationService.getStats();
+      setMigrationStats(stats);
+    } catch (error) {
+      console.error('Error loading migration status:', error);
+      setError('Failed to load migration status');
+    }
+  };
+
+  // ========================================================================
+  // MIGRATION EXECUTION
+  // ========================================================================
+
+  const executeMigration = async () => {
+    setIsLoading(true);
+    setError(null);
+    setLogs([]);
+
+    try {
+      addLog('🚀 Starting database migration...');
+      
+      const migrationService = new MigrationService();
+      const result: MigrationResult = await migrationService.executeMigration();
+
+      if (result.success) {
+        addLog('✅ Migration completed successfully!');
+        setMigrationStats(result.stats);
+        onMigrationComplete();
+      } else {
+        addLog(`❌ Migration failed: ${result.error}`);
+        setError(result.error || 'Migration failed');
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      addLog(`❌ Migration error: ${errorMessage}`);
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
+      await loadMigrationStatus();
+    }
+  };
+
+  const rollbackMigration = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      addLog('🔄 Rolling back migration...');
+      
+      const migrationService = new MigrationService();
+      await migrationService.rollbackMigration();
+      
+      addLog('✅ Migration rollback completed');
+      await loadMigrationStatus();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      addLog(`❌ Rollback error: ${errorMessage}`);
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // ========================================================================
+  // UTILITY FUNCTIONS
+  // ========================================================================
+
+  const addLog = (message: string) => {
+    const timestamp = new Date().toLocaleTimeString();
+    setLogs(prev => [...prev, `[${timestamp}] ${message}`]);
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'completed': return 'text-green-600';
+      case 'in_progress': return 'text-blue-600';
+      case 'failed': return 'text-red-600';
+      default: return 'text-gray-600';
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'completed': return '✅';
+      case 'in_progress': return '⏳';
+      case 'failed': return '❌';
+      default: return '❓';
+    }
+  };
+
+  // ========================================================================
+  // RENDER
+  // ========================================================================
+
+  return (
+    <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-lg">
+      <h1 className="text-3xl font-bold text-gray-900 mb-6">
+        🔄 Database Migration Interface
+      </h1>
+
+      {/* Migration Status */}
+      <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+        <h2 className="text-xl font-semibold mb-3">Migration Status</h2>
+        
+        {migrationStatus ? (
+          <div className="space-y-2">
+            <div className="flex items-center space-x-2">
+              <span className="text-2xl">{getStatusIcon(migrationStatus.status)}</span>
+              <span className={`font-semibold ${getStatusColor(migrationStatus.status)}`}>
+                {migrationStatus.status.toUpperCase()}
+              </span>
+            </div>
+            <p className="text-sm text-gray-600">
+              Migration ID: {migrationStatus.migrationId}
+            </p>
+            <p className="text-sm text-gray-600">
+              Last Updated: {new Date(migrationStatus.timestamp as any).toLocaleString()}
+            </p>
+          </div>
+        ) : (
+          <p className="text-gray-500">No migration status available</p>
+        )}
+      </div>
+
+      {/* Migration Stats */}
+      {migrationStats && (
+        <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+          <h2 className="text-xl font-semibold mb-3">Migration Statistics</h2>
+          
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-blue-600">
+                {migrationStats.migratedUsers}/{migrationStats.totalUsers}
+              </div>
+              <div className="text-sm text-gray-600">Users</div>
+            </div>
+            
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-600">
+                {migrationStats.migratedSettlements}/{migrationStats.totalSettlements}
+              </div>
+              <div className="text-sm text-gray-600">Settlements</div>
+            </div>
+            
+            <div className="text-center">
+              <div className="text-2xl font-bold text-purple-600">
+                {migrationStats.migratedProjects}/{migrationStats.totalProjects}
+              </div>
+              <div className="text-sm text-gray-600">Projects</div>
+            </div>
+            
+            <div className="text-center">
+              <div className="text-2xl font-bold text-orange-600">
+                {migrationStats.migratedTasks}/{migrationStats.totalTasks}
+              </div>
+              <div className="text-sm text-gray-600">Tasks</div>
+            </div>
+          </div>
+
+          {migrationStats.errors.length > 0 && (
+            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <h3 className="font-semibold text-red-800 mb-2">Errors ({migrationStats.errors.length})</h3>
+              <div className="max-h-32 overflow-y-auto">
+                {migrationStats.errors.map((error, index) => (
+                  <div key={index} className="text-sm text-red-700 mb-1">
+                    {error.type}: {error.message}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Migration Actions */}
+      <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+        <h2 className="text-xl font-semibold mb-3">Migration Actions</h2>
+        
+        <div className="space-y-3">
+          {/* Execute Migration */}
+          <button
+            onClick={executeMigration}
+            disabled={isLoading || migrationStatus?.status === 'completed'}
+            className={`w-full py-3 px-4 rounded-lg font-semibold ${
+              isLoading || migrationStatus?.status === 'completed'
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                : 'bg-blue-600 text-white hover:bg-blue-700'
+            }`}
+          >
+            {isLoading ? (
+              <span className="flex items-center justify-center">
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                Executing Migration...
+              </span>
+            ) : migrationStatus?.status === 'completed' ? (
+              '✅ Migration Completed'
+            ) : (
+              '🚀 Execute Migration'
+            )}
+          </button>
+
+          {/* Rollback Migration */}
+          <button
+            onClick={rollbackMigration}
+            disabled={isLoading || !migrationStatus || migrationStatus.status === 'failed'}
+            className={`w-full py-3 px-4 rounded-lg font-semibold ${
+              isLoading || !migrationStatus || migrationStatus.status === 'failed'
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                : 'bg-red-600 text-white hover:bg-red-700'
+            }`}
+          >
+            {isLoading ? (
+              <span className="flex items-center justify-center">
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                Rolling Back...
+              </span>
+            ) : (
+              '🔄 Rollback Migration'
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Error Display */}
+      {error && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <h3 className="font-semibold text-red-800 mb-2">Error</h3>
+          <p className="text-red-700">{error}</p>
+        </div>
+      )}
+
+      {/* Migration Logs */}
+      {logs.length > 0 && (
+        <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+          <h2 className="text-xl font-semibold mb-3">Migration Logs</h2>
+          
+          <div className="max-h-64 overflow-y-auto bg-black text-green-400 p-4 rounded-lg font-mono text-sm">
+            {logs.map((log, index) => (
+              <div key={index} className="mb-1">{log}</div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Migration Information */}
+      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        <h3 className="font-semibold text-blue-800 mb-2">ℹ️ Migration Information</h3>
+        <div className="text-sm text-blue-700 space-y-1">
+          <p>• This migration transforms your embedded document structure to a normalized database</p>
+          <p>• The process includes data validation, transformation, and integrity checks</p>
+          <p>• Migration is atomic - either all data migrates successfully or none does</p>
+          <p>• You can rollback the migration if needed (data will be restored to original state)</p>
+          <p>• The migration creates new collections (users_v2, settlements_v2, etc.)</p>
+          <p>• Legacy collections remain untouched during migration</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default MigrationInterface; 

@@ -115,9 +115,10 @@ service cloud.firestore {
       allow create: if request.auth != null && 
         request.auth.uid == request.resource.data.ownerId;
       
-      // Update access: owners only for now
+      // Update access: owners and collaborators with write access
       allow update: if request.auth != null && 
-        request.auth.uid == resource.data.ownerId;
+        (request.auth.uid == resource.data.ownerId ||
+         hasSettlementWriteAccess(resource.id));
       
       // Delete access: only owners
       allow delete: if request.auth != null && 
@@ -183,6 +184,30 @@ service cloud.firestore {
       // Individual read permissions will handle the actual access control  
       allow list: if request.auth != null;
     }
+
+    // Tasks V2 collection - Same rules as tasks collection for V2 system
+    match /tasks_v2/{taskId} {
+      // Read access: assigned users, project owners, and settlement collaborators
+      allow read: if request.auth != null && 
+        (request.auth.uid == resource.data.assignedTo ||
+         (exists(/databases/$(database)/documents/projects/$(resource.data.projectId)) &&
+          get(/databases/$(database)/documents/projects/$(resource.data.projectId)).data.ownerId == request.auth.uid) ||
+         (exists(/databases/$(database)/documents/projects/$(resource.data.projectId)) &&
+          get(/databases/$(database)/documents/projects/$(resource.data.projectId)).data.settlementId != null &&
+          hasActiveSettlementCollaboration(get(/databases/$(database)/documents/projects/$(resource.data.projectId)).data.settlementId)));
+      
+      // Create access: authenticated users
+      allow create: if request.auth != null;
+      
+      // Update access: SIMPLIFIED - Allow authenticated users to update tasks
+      allow update: if request.auth != null;
+      
+      // Delete access: SIMPLIFIED - Allow authenticated users to delete tasks
+      allow delete: if request.auth != null;
+      
+      // List access: SIMPLIFIED - Allow all authenticated users to query tasks
+      allow list: if request.auth != null;
+    }
     
     // Project collaborators collection
     match /project_collaborators/{collaborationId} {
@@ -219,30 +244,66 @@ service cloud.firestore {
 
     // Settlement collaborations collection
     match /settlement_collaborations_v2/{collaborationId} {
-      allow read: if request.auth != null && 
-        (request.auth.uid == resource.data.userId || 
-         request.auth.uid == resource.data.invitedBy ||
-         isSettlementOwner(resource.data.settlementId));
-      allow write: if request.auth != null && 
-        (request.auth.uid == resource.data.invitedBy ||
-         request.auth.uid == resource.data.userId ||
-         isSettlementOwner(resource.data.settlementId));
-      allow create: if request.auth != null && 
-        (request.auth.uid == request.resource.data.invitedBy ||
-         request.auth.uid == request.resource.data.userId ||
-         isSettlementOwner(request.resource.data.settlementId));
-      allow list: if request.auth != null;
+      // 🔒 TEMPORARY DEBUG: Allow all operations for debugging
+      allow read, write, create, list: if request.auth != null;
+      
+      // Original rules commented out for debugging:
+      // allow read: if request.auth != null && 
+      //   (request.auth.uid == resource.data.userId || 
+      //    request.auth.uid == resource.data.invitedBy ||
+      //    isSettlementOwner(resource.data.settlementId));
+      // allow write: if request.auth != null && 
+      //   (request.auth.uid == resource.data.invitedBy ||
+      //    request.auth.uid == resource.data.userId ||
+      //    isSettlementOwner(resource.data.settlementId));
+      // allow create: if request.auth != null && 
+      //   (request.auth.uid == request.resource.data.invitedBy ||
+      //    request.auth.uid == request.resource.data.userId ||
+      //    isSettlementOwner(request.resource.data.settlementId) ||
+      //    collaborationId == request.auth.uid + '_' + request.resource.data.settlementId);
+      // allow list: if request.auth != null;
     }
 
     // Settlement invite links collection
     match /settlement_invite_links_v2/{linkId} {
+      // 🔒 TEMPORARY DEBUG: Allow all operations for debugging
+      allow read, write, create, list: if request.auth != null;
+      
+      // Original rules commented out for debugging:
+      // allow read: if request.auth != null && 
+      //   (request.auth.uid == resource.data.createdBy || 
+      //    resource.data.isActive == true);
+      // allow write: if request.auth != null && 
+      //   request.auth.uid == resource.data.createdBy;
+      // allow create: if request.auth != null && 
+      //   request.auth.uid == request.resource.data.createdBy;
+      // allow list: if request.auth != null;
+    }
+
+    // Task contributions collection - For contribution submission and approval system
+    match /task_contributions_v2/{contributionId} {
+      // Read access: Users can read their own contributions, settlement owners/collaborators can read all settlement contributions
       allow read: if request.auth != null && 
-        (request.auth.uid == resource.data.createdBy || 
-         resource.data.isActive == true);
-      allow write: if request.auth != null && 
-        request.auth.uid == resource.data.createdBy;
+        (request.auth.uid == resource.data.userId ||
+         isSettlementOwner(resource.data.settlementId) ||
+         hasActiveSettlementCollaboration(resource.data.settlementId));
+      
+      // Create access: Users can create contributions for tasks assigned to them
       allow create: if request.auth != null && 
-        request.auth.uid == request.resource.data.createdBy;
+        request.auth.uid == request.resource.data.userId;
+      
+      // Update access: Settlement owners and collaborators can approve/reject contributions
+      allow update: if request.auth != null && 
+        (isSettlementOwner(resource.data.settlementId) ||
+         hasActiveSettlementCollaboration(resource.data.settlementId));
+      
+      // Delete access: Users can delete their own pending contributions, settlement owners/collaborators can delete any
+      allow delete: if request.auth != null && 
+        (request.auth.uid == resource.data.userId && resource.data.status == 'pending') ||
+        isSettlementOwner(resource.data.settlementId) ||
+        hasActiveSettlementCollaboration(resource.data.settlementId);
+      
+      // List access: Users can query contributions they have access to
       allow list: if request.auth != null;
     }
     
