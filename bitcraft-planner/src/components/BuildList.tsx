@@ -2,7 +2,11 @@ import React, { useState } from 'react';
 import { useItemsStore } from '../state/useItemsStore';
 import { RARITY_COLORS, RARITY_NAMES } from '../utils/constants';
 
-const BuildList: React.FC = () => {
+interface BuildListProps {
+  onSelectForResolver?: (itemId: string, quantity: number, recipeIndex: number) => void;
+}
+
+const BuildList: React.FC<BuildListProps> = ({ onSelectForResolver }) => {
   const { 
     buildList, 
     items, 
@@ -129,6 +133,18 @@ const BuildList: React.FC = () => {
                 </div>
               )}
             </div>
+
+            {/* Analyze Button for all items */}
+            {onSelectForResolver && (
+              <div className="mb-2">
+                <button
+                  onClick={() => onSelectForResolver(buildItem.itemId, buildItem.quantity, buildItem.recipeIndex)}
+                  className="w-full bg-purple-100 hover:bg-purple-200 text-purple-700 font-medium py-1 px-2 rounded text-xs transition-colors border border-purple-200"
+                >
+                  📘 Analyze with Resolver
+                </button>
+              </div>
+            )}
 
             {/* Recipe Info - Compact */}
             {recipe && (

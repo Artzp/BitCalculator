@@ -5,9 +5,15 @@ import BuildList from './BuildList';
 import MaterialSummary from './MaterialSummary';
 import InventoryInput from './InventoryInput';
 import BuildSteps from './BuildSteps';
+import RecipeResolverView from './RecipeResolverView';
 
 const BitCalculatorPage: React.FC = () => {
-  const [activeView, setActiveView] = useState<'steps' | 'materials' | 'inventory'>('steps');
+  const [activeView, setActiveView] = useState<'steps' | 'materials' | 'inventory' | 'resolver'>('steps');
+  const [selectedItemForResolver, setSelectedItemForResolver] = useState<{
+    itemId: string;
+    quantity: number;
+    recipeIndex: number;
+  } | null>(null);
   const { buildList } = useItemsStore();
 
   return (
@@ -48,7 +54,12 @@ const BitCalculatorPage: React.FC = () => {
               )}
             </div>
             <div className="flex-1 min-h-0">
-              <BuildList />
+              <BuildList 
+                onSelectForResolver={(itemId, quantity, recipeIndex) => {
+                  setSelectedItemForResolver({ itemId, quantity, recipeIndex });
+                  setActiveView('resolver');
+                }}
+              />
             </div>
           </div>
         </div>
@@ -57,10 +68,10 @@ const BitCalculatorPage: React.FC = () => {
         <div className="lg:col-span-1">
           <div className="bg-white rounded-xl p-4 shadow-lg border border-slate-200 h-full flex flex-col">
             {/* Tab Navigation - Compact */}
-            <div className="flex bg-slate-100 rounded-lg p-0.5 mb-3">
+            <div className="grid grid-cols-4 bg-slate-100 rounded-lg p-0.5 mb-3 gap-0.5">
               <button
                 onClick={() => setActiveView('steps')}
-                className={`flex-1 py-1.5 px-2 rounded-md font-medium text-xs transition-all duration-200 ${
+                className={`py-1.5 px-1 rounded-md font-medium text-xs transition-all duration-200 ${
                   activeView === 'steps'
                     ? 'bg-white text-slate-800 shadow-sm'
                     : 'text-slate-600 hover:text-slate-800'
@@ -70,7 +81,7 @@ const BitCalculatorPage: React.FC = () => {
               </button>
               <button
                 onClick={() => setActiveView('materials')}
-                className={`flex-1 py-1.5 px-2 rounded-md font-medium text-xs transition-all duration-200 ${
+                className={`py-1.5 px-1 rounded-md font-medium text-xs transition-all duration-200 ${
                   activeView === 'materials'
                     ? 'bg-white text-slate-800 shadow-sm'
                     : 'text-slate-600 hover:text-slate-800'
@@ -80,13 +91,23 @@ const BitCalculatorPage: React.FC = () => {
               </button>
               <button
                 onClick={() => setActiveView('inventory')}
-                className={`flex-1 py-1.5 px-2 rounded-md font-medium text-xs transition-all duration-200 ${
+                className={`py-1.5 px-1 rounded-md font-medium text-xs transition-all duration-200 ${
                   activeView === 'inventory'
                     ? 'bg-white text-slate-800 shadow-sm'
                     : 'text-slate-600 hover:text-slate-800'
                 }`}
               >
                 📦 Inventory
+              </button>
+              <button
+                onClick={() => setActiveView('resolver')}
+                className={`py-1.5 px-1 rounded-md font-medium text-xs transition-all duration-200 ${
+                  activeView === 'resolver'
+                    ? 'bg-white text-slate-800 shadow-sm'
+                    : 'text-slate-600 hover:text-slate-800'
+                }`}
+              >
+                📘 Resolver
               </button>
             </div>
 
@@ -95,6 +116,13 @@ const BitCalculatorPage: React.FC = () => {
               {activeView === 'steps' && <BuildSteps />}
               {activeView === 'materials' && <MaterialSummary />}
               {activeView === 'inventory' && <InventoryInput />}
+              {activeView === 'resolver' && (
+                <RecipeResolverView
+                  targetItemId={selectedItemForResolver?.itemId}
+                  targetQuantity={selectedItemForResolver?.quantity}
+                  recipeIndex={selectedItemForResolver?.recipeIndex}
+                />
+              )}
             </div>
           </div>
         </div>
