@@ -1,109 +1,149 @@
-import { ItemsData } from '../types/Item';
+import { ItemsData, Item } from '../types/Item';
 import { Inventory } from '../state/useItemsStore';
 
-// Find all items that use a specific component in their recipes
-export const findItemsUsingComponent = (items: ItemsData, componentId: string): string[] => {
-  const itemsUsingComponent: string[] = [];
-  
-  Object.entries(items).forEach(([itemId, item]) => {
-    if (item.recipes && item.recipes.length > 0) {
-      item.recipes.forEach(recipe => {
-        if (recipe.consumed_items) {
-          recipe.consumed_items.forEach(ingredient => {
-            if (ingredient.id.toString() === componentId) {
-              itemsUsingComponent.push(itemId);
-            }
-          });
-        }
-      });
-    }
-  });
-  
-  return itemsUsingComponent;
-};
+/**
+ * INVENTORY SEPARATION UTILITIES
+ * 
+ * This file ensures clear separation between:
+ * 1. Personal Inventory - used in BitCalculator for individual planning
+ * 2. Settlement Inventory - used in Settlement System for collaborative work
+ */
 
-// Calculate effective inventory quantity considering component substitution
-export const getEffectiveInventoryQuantity = (
-  items: ItemsData,
-  inventory: Inventory,
-  targetItemId: string
-): number => {
-  // Direct inventory amount
-  let totalAvailable = inventory[targetItemId] || 0;
-  
-  // Find items that use this component and check if we have any of those
-  const itemsUsingThisComponent = findItemsUsingComponent(items, targetItemId);
-  
-  itemsUsingThisComponent.forEach(itemId => {
-    const availableQuantity = inventory[itemId] || 0;
-    if (availableQuantity > 0) {
-      // Calculate how many of the component this higher-tier item provides
-      const item = items[itemId];
-      if (item && item.recipes && item.recipes.length > 0) {
-        // Use the first recipe to determine component ratio
-        const recipe = item.recipes[0];
-        const componentUsage = recipe.consumed_items.find(
-          ingredient => ingredient.id.toString() === targetItemId
-        );
-        
-        if (componentUsage) {
-          // Each higher-tier item provides componentUsage.quantity of the component
-          // Adjusted for the recipe output quantity
-          const componentProvidedPerItem = Math.floor(
-            (componentUsage.quantity * availableQuantity) / recipe.output_quantity
-          );
-          totalAvailable += componentProvidedPerItem;
-        }
-      }
-    }
-  });
-  
-  return totalAvailable;
-};
+// ===== PERSONAL INVENTORY OPERATIONS =====
+// These functions work with useItemsStore inventory
 
-// Calculate missing materials with component substitution logic
-export const calculateMissingMaterials = (
-  items: ItemsData,
-  inventory: Inventory,
-  materialNeeds: Map<string, number>
-): Array<{
-  itemId: string;
-  needed: number;
-  have: number;
-  effectiveHave: number;
-  missing: number;
-  substitutes: Array<{ itemId: string; quantity: number; itemName: string }>;
-}> => {
-  return Array.from(materialNeeds.entries()).map(([itemId, needed]) => {
-    const directHave = inventory[itemId] || 0;
-    const effectiveHave = getEffectiveInventoryQuantity(items, inventory, itemId);
-    const missing = Math.max(0, needed - effectiveHave);
-    
-    // Find substitutes
-    const substitutes: Array<{ itemId: string; quantity: number; itemName: string }> = [];
-    const itemsUsingThisComponent = findItemsUsingComponent(items, itemId);
-    
-    itemsUsingThisComponent.forEach(substituteItemId => {
-      const availableQuantity = inventory[substituteItemId] || 0;
-      if (availableQuantity > 0) {
-        const substituteItem = items[substituteItemId];
-        if (substituteItem) {
-          substitutes.push({
-            itemId: substituteItemId,
-            quantity: availableQuantity,
-            itemName: substituteItem.name
-          });
-        }
-      }
-    });
-    
-    return {
-      itemId,
-      needed,
-      have: directHave,
-      effectiveHave,
-      missing,
-      substitutes
+export function getEffectiveInventoryQuantity(items: ItemsData, personalInventory: Inventory, itemId: string, processingStack: Set<string> = new Set()): number {
+  const directQuantity = personalInventory[itemId] || 0;
+  const item = items[itemId];
+  
+  if (!item || !item.recipes || item.recipes.length === 0) {
+    return directQuantity;
+  }
+  
+  // Cycle detection: if we're already processing this item, return direct quantity to avoid infinite recursion
+  if (processingStack.has(itemId)) {
+    console.warn(`🔄 Circular recipe dependency detected for item ${itemId}, returning direct quantity only`);
+    return directQuantity;
+  }
+  
+  const recipe = item.recipes[0];
+  
+  if (!recipe.consumed_items || recipe.consumed_items.length === 0) {
+    return directQuantity;
+  }
+  
+  // Add current item to processing stack
+  processingStack.add(itemId);
+  
+  const maxFromIngredients = recipe.consumed_items.reduce((min: number, input) => {
+    const inputQuantity = getEffectiveInventoryQuantity(items, personalInventory, input.id.toString(), processingStack);
+    const possibleCrafts = Math.floor(inputQuantity / input.quantity);
+    return Math.min(min, possibleCrafts);
+  }, Infinity);
+  
+  // Remove current item from processing stack
+  processingStack.delete(itemId);
+  
+  const additionalFromCrafting = maxFromIngredients === Infinity ? 0 : maxFromIngredients;
+  
+  return directQuantity + additionalFromCrafting;
+}
+
+/**
+ * Validates that personal inventory operations don't access settlement data
+ */
+export function validatePersonalInventoryOperation(context: string, inventory: any): boolean {
+  if (!inventory) return true;
+  
+  // Check if this looks like settlement inventory (has settlement-specific structure)
+  const hasSettlementStructure = Object.values(inventory).some((item: any) => 
+    item && typeof item === 'object' && 
+    ('reservedQuantity' in item || 'storageLocation' in item || 'lastUpdated' in item)
+  );
+  
+  if (hasSettlementStructure) {
+    console.error(`❌ INVENTORY SEPARATION ERROR: ${context} is trying to use settlement inventory structure!`);
+    console.error('Personal inventory should be simple { itemId: quantity } objects');
+    return false;
+  }
+  
+  return true;
+}
+
+// ===== SETTLEMENT INVENTORY OPERATIONS =====
+// These functions work with settlement inventory structure
+
+export interface SettlementInventoryItem {
+  quantity: number;
+  reservedQuantity: number;
+  storageLocation?: string;
+  lastUpdated?: any; // Firebase Timestamp
+  itemName?: string;
+  itemId?: string;
+}
+
+export interface SettlementInventoryData {
+  [itemId: string]: SettlementInventoryItem;
+}
+
+/**
+ * Get available quantity from settlement inventory (total - reserved)
+ */
+export function getSettlementAvailableQuantity(settlementInventory: SettlementInventoryData, itemId: string): number {
+  const item = settlementInventory[itemId];
+  if (!item) return 0;
+  
+  return Math.max(0, item.quantity - (item.reservedQuantity || 0));
+}
+
+/**
+ * Validates that settlement inventory operations don't access personal data
+ */
+export function validateSettlementInventoryOperation(context: string, inventory: any): boolean {
+  if (!inventory) return true;
+  
+  // Check if this looks like personal inventory (simple number values)
+  const hasPersonalStructure = Object.values(inventory).some((item: any) => 
+    typeof item === 'number'
+  );
+  
+  if (hasPersonalStructure) {
+    console.error(`❌ INVENTORY SEPARATION ERROR: ${context} is trying to use personal inventory structure!`);
+    console.error('Settlement inventory should have { quantity, reservedQuantity, ... } structure');
+    return false;
+  }
+  
+  return true;
+}
+
+/**
+ * Convert settlement inventory to format expected by calculators
+ */
+export function convertSettlementInventoryForCalculations(settlementInventory: SettlementInventoryData): { [itemId: string]: { quantity: number; reservedQuantity: number } } {
+  const result: { [itemId: string]: { quantity: number; reservedQuantity: number } } = {};
+  
+  Object.entries(settlementInventory).forEach(([itemId, item]) => {
+    result[itemId] = {
+      quantity: item.quantity,
+      reservedQuantity: item.reservedQuantity || 0
     };
   });
-}; 
+  
+  return result;
+}
+
+/**
+ * INVENTORY SYSTEM SUMMARY:
+ * 
+ * PERSONAL INVENTORY (BitCalculator):
+ * - Structure: { [itemId]: number }
+ * - Storage: useItemsStore
+ * - Usage: Individual crafting calculations
+ * - Access: User's personal data only
+ * 
+ * SETTLEMENT INVENTORY (Settlement System):
+ * - Structure: { [itemId]: { quantity, reservedQuantity, storageLocation?, lastUpdated? } }
+ * - Storage: Firebase settlement documents
+ * - Usage: Collaborative project calculations
+ * - Access: Shared among settlement members
+ */ 

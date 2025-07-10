@@ -1,0 +1,1183 @@
+{
+  "Cooking Station": {
+    "total_recipes": 27,
+    "unique_items": 27,
+    "skill_breakdown": {
+      "Carpentry (Level 1)": 27
+    },
+    "output_breakdown": {
+      "Output 1": 26,
+      "Output 10": 1
+    },
+    "sample_items": [
+      "Rough Wood Plank Package",
+      "Sturdy Wood Plank Package",
+      "Empty Bucket",
+      "Exquisite Wood Plank Package",
+      "Campfire Kit",
+      "Refined Rough Plank",
+      "Refined Peerless Wood Plank Package",
+      "Refined Magnificient Wood Plank Package",
+      "Ornate Wood Plank Package",
+      "Fine Wood Plank Package"
+    ]
+  },
+  "Fine Scholar Station": {
+    "total_recipes": 150,
+    "unique_items": 30,
+    "skill_breakdown": {
+      "Smithing (Level 40)": 150
+    },
+    "output_breakdown": {
+      "Output 1": 149,
+      "Output 5": 1
+    },
+    "sample_items": [
+      "Elenvar Quill",
+      "Elenvar Plated Helm",
+      "Elenvar Claymore",
+      "Elenvar Hoe",
+      "Elenvar Nails",
+      "Elenvar Crossbow",
+      "Elenvar Machete",
+      "Elenvar Axe",
+      "Cooling Capacitor",
+      "Elenvar Pickaxe"
+    ]
+  },
+  "Peerless Carpentry Station": {
+    "total_recipes": 34,
+    "unique_items": 26,
+    "skill_breakdown": {
+      "Masonry (Level 60)": 34
+    },
+    "output_breakdown": {
+      "Output 1": 34
+    },
+    "sample_items": [
+      "Peerless Sapphire Ring",
+      "Peerless Gem Encrusted Ring",
+      "Heated Capacitor",
+      "Uncut Peerless Emerald",
+      "Peerless Ruby Fragment",
+      "Peerless Sapphire Fragment",
+      "Peerless Brick Slab",
+      "Peerless Sapphire",
+      "Uncut Peerless Diamond",
+      "Peerless Emerald Ring"
+    ]
+  },
+  "No Building Required": {
+    "total_recipes": 2082,
+    "unique_items": 1060,
+    "skill_breakdown": {
+      "Scholar (Level 40)": 18,
+      "Scholar (Level 60)": 17,
+      "Scholar (Level 1)": 28,
+      "Carpentry (Level 1)": 16,
+      "Tailoring (Level 50)": 54,
+      "Scholar (Level 90)": 15,
+      "Leatherworking (Level 60)": 66,
+      "Tailoring (Level 80)": 72,
+      "Forestry (Level 1)": 22,
+      "Forestry (Level 20)": 5,
+      "Mining (Level 1)": 3,
+      "Leatherworking (Level 1)": 49,
+      "Hunting (Level 1)": 3,
+      "Tailoring (Level 1)": 44,
+      "Farming (Level 1)": 75,
+      "Fishing (Level 1)": 8,
+      "Cooking (Level 1)": 79,
+      "Foraging (Level 1)": 1,
+      "Mining (Level 20)": 3,
+      "Leatherworking (Level 20)": 20,
+      "Hunting (Level 20)": 3,
+      "Tailoring (Level 20)": 18,
+      "Farming (Level 20)": 15,
+      "Fishing (Level 20)": 8,
+      "Cooking (Level 20)": 61,
+      "Foraging (Level 20)": 1,
+      "Scholar (Level 20)": 17,
+      "Cooking (Level 30)": 60,
+      "Cooking (Level 60)": 59,
+      "Forestry (Level 30)": 5,
+      "Forestry (Level 60)": 4,
+      "Forestry (Level 40)": 4,
+      "Mining (Level 30)": 3,
+      "Leatherworking (Level 30)": 32,
+      "Hunting (Level 30)": 6,
+      "Tailoring (Level 30)": 30,
+      "Farming (Level 30)": 15,
+      "Fishing (Level 30)": 8,
+      "Foraging (Level 30)": 1,
+      "Scholar (Level 30)": 17,
+      "Forestry (Level 50)": 4,
+      "Mining (Level 40)": 3,
+      "Leatherworking (Level 40)": 43,
+      "Hunting (Level 40)": 12,
+      "Tailoring (Level 40)": 42,
+      "Cooking (Level 50)": 59,
+      "Farming (Level 40)": 15,
+      "Fishing (Level 40)": 8,
+      "Cooking (Level 40)": 59,
+      "Foraging (Level 40)": 1,
+      "Mining (Level 50)": 3,
+      "Leatherworking (Level 80)": 72,
+      "Leatherworking (Level 50)": 54,
+      "Hunting (Level 50)": 6,
+      "Farming (Level 50)": 15,
+      "Fishing (Level 50)": 8,
+      "Foraging (Level 50)": 1,
+      "Scholar (Level 50)": 17,
+      "Mining (Level 60)": 3,
+      "Hunting (Level 60)": 3,
+      "Tailoring (Level 60)": 66,
+      "Farming (Level 60)": 12,
+      "Fishing (Level 60)": 8,
+      "Foraging (Level 60)": 1,
+      "Fishing (Level 80)": 8,
+      "Farming (Level 70)": 12,
+      "Tailoring (Level 100)": 72,
+      "Leatherworking (Level 100)": 72,
+      "Hunting (Level 90)": 3,
+      "Tailoring (Level 70)": 72,
+      "Farming (Level 100)": 8,
+      "Leatherworking (Level 90)": 72,
+      "Fishing (Level 90)": 8,
+      "Leatherworking (Level 70)": 72,
+      "Scholar (Level 70)": 15,
+      "Fishing (Level 100)": 8,
+      "Scholar (Level 80)": 15,
+      "Tailoring (Level 90)": 72,
+      "Farming (Level 90)": 12,
+      "Forestry (Level 100)": 3,
+      "ANY (Level 20)": 1,
+      "ANY (Level 1)": 1,
+      "Fishing (Level 70)": 8,
+      "Forestry (Level 90)": 3,
+      "Scholar (Level 100)": 15,
+      "Mining (Level 100)": 3,
+      "ANY (Level 80)": 1,
+      "Hunting (Level 80)": 3,
+      "Mining (Level 90)": 3,
+      "Cooking (Level 90)": 1,
+      "Hunting (Level 100)": 3,
+      "Forestry (Level 80)": 3,
+      "Hunting (Level 70)": 3,
+      "Cooking (Level 100)": 1,
+      "Farming (Level 80)": 12,
+      "Mining (Level 70)": 3,
+      "ANY (Level 60)": 1,
+      "Mining (Level 80)": 3,
+      "Cooking (Level 80)": 1,
+      "Forestry (Level 70)": 3,
+      "Foraging (Level 100)": 1,
+      "Cooking (Level 70)": 1,
+      "Foraging (Level 90)": 1,
+      "ANY (Level 40)": 1,
+      "Foraging (Level 70)": 1,
+      "Foraging (Level 80)": 1
+    },
+    "output_breakdown": {
+      "Output 1": 2025,
+      "Output 4": 10,
+      "Output 2": 6,
+      "Output 3": 31,
+      "Output 100": 10
+    },
+    "sample_items": [
+      "Ornate Firesand",
+      "Ornate Raw Pelt",
+      "Pristine Crop Oil",
+      "Simple Dried Pelt",
+      "Magnificient Cleaned Pelt",
+      "Peerless Straw",
+      "Serpentfish Scale",
+      "Fine Mushroom Skewer",
+      "Flawless Leather Gloves",
+      "Pristine Ink"
+    ]
+  },
+  "Hunting Station": {
+    "total_recipes": 1,
+    "unique_items": 1,
+    "skill_breakdown": {
+      "Cooking (Level 1)": 1
+    },
+    "output_breakdown": {
+      "Output 1": 1
+    },
+    "sample_items": [
+      "Water Bucket"
+    ]
+  },
+  "Smithing Station": {
+    "total_recipes": 6,
+    "unique_items": 6,
+    "skill_breakdown": {
+      "Forestry (Level 1)": 2,
+      "Cooking (Level 1)": 1,
+      "Masonry (Level 1)": 3
+    },
+    "output_breakdown": {
+      "Output 1": 6
+    },
+    "sample_items": [
+      "Rough Brick",
+      "Pitch",
+      "Rough Forester's Pot",
+      "Bone Glue",
+      "Rough Charcoal",
+      "Rough Glass"
+    ]
+  },
+  "Sturdy Carpentry Station": {
+    "total_recipes": 34,
+    "unique_items": 26,
+    "skill_breakdown": {
+      "Masonry (Level 30)": 34
+    },
+    "output_breakdown": {
+      "Output 1": 34
+    },
+    "sample_items": [
+      "Sturdy Ruby Ring",
+      "Sturdy Diamond",
+      "Refined Sturdy Brick",
+      "Sturdy Emerald Fragment",
+      "Sturdy Unfired Forester's Pot",
+      "Uncut Sturdy Ruby",
+      "Sturdy Sapphire",
+      "Sturdy Glass Vial",
+      "Sturdy Ruby Fragment",
+      "Infused Potter's Mix"
+    ]
+  },
+  "Exquisite Carpentry Station": {
+    "total_recipes": 34,
+    "unique_items": 26,
+    "skill_breakdown": {
+      "Masonry (Level 50)": 34
+    },
+    "output_breakdown": {
+      "Output 1": 34
+    },
+    "sample_items": [
+      "Exquisite Gem Encrusted Ring",
+      "Uncut Exquisite Ruby",
+      "Exquisite Diamond Ring",
+      "Crushed Piece of Auric Ore",
+      "Exquisite Sapphire Ring",
+      "Exquisite Sapphire Fragment",
+      "Refined Exquisite Brick",
+      "Exquisite Potter's Mix",
+      "Uncut Exquisite Sapphire",
+      "Exquisite Ruby Fragment"
+    ]
+  },
+  "Sturdy Farming Station": {
+    "total_recipes": 5,
+    "unique_items": 5,
+    "skill_breakdown": {
+      "Masonry (Level 1)": 4,
+      "Cooking (Level 1)": 1
+    },
+    "output_breakdown": {
+      "Output 1": 4,
+      "Output 10": 1
+    },
+    "sample_items": [
+      "Sturdy Braxite",
+      "Crushed Emarium Ore",
+      "Argent Ore Concentrate",
+      "Crushed Sturdy Shells",
+      "Infused Embergrain Flour"
+    ]
+  },
+  "Exquisite Farming Station": {
+    "total_recipes": 5,
+    "unique_items": 5,
+    "skill_breakdown": {
+      "Masonry (Level 1)": 4,
+      "Cooking (Level 1)": 1
+    },
+    "output_breakdown": {
+      "Output 1": 4,
+      "Output 10": 1
+    },
+    "sample_items": [
+      "Crushed Luminite Ore",
+      "Crushed Exquisite Shells",
+      "Exquisite Embergrain Flour",
+      "Exquisite Braxite",
+      "Auric Ore Concentrate"
+    ]
+  },
+  "Sturdy Fishing Station": {
+    "total_recipes": 2,
+    "unique_items": 2,
+    "skill_breakdown": {
+      "Smithing (Level 1)": 2
+    },
+    "output_breakdown": {
+      "Output 1": 2
+    },
+    "sample_items": [
+      "Molten Emarium",
+      "Argent Nugget"
+    ]
+  },
+  "Exquisite Fishing Station": {
+    "total_recipes": 2,
+    "unique_items": 2,
+    "skill_breakdown": {
+      "Smithing (Level 1)": 2
+    },
+    "output_breakdown": {
+      "Output 1": 2
+    },
+    "sample_items": [
+      "Auric Nugget",
+      "Molten Luminite"
+    ]
+  },
+  "Sturdy Scholar Station": {
+    "total_recipes": 102,
+    "unique_items": 30,
+    "skill_breakdown": {
+      "Smithing (Level 30)": 102
+    },
+    "output_breakdown": {
+      "Output 1": 101,
+      "Output 5": 1
+    },
+    "sample_items": [
+      "Emarium Rod",
+      "Emarium Scissors",
+      "Emarium Daggers",
+      "Emarium Crossbow",
+      "Emarium Hammer",
+      "Emarium Plated Boots",
+      "Emarium Plated Helm",
+      "Emarium Mace",
+      "Emarium Claymore",
+      "Emarium Ingot"
+    ]
+  },
+  "Exquisite Scholar Station": {
+    "total_recipes": 198,
+    "unique_items": 30,
+    "skill_breakdown": {
+      "Smithing (Level 50)": 198
+    },
+    "output_breakdown": {
+      "Output 1": 197,
+      "Output 5": 1
+    },
+    "sample_items": [
+      "Luminite Spear & Shield",
+      "Luminite Saw",
+      "Luminite Pickaxe",
+      "Luminite Frames",
+      "Luminite Axe",
+      "Luminite Plated Bracers",
+      "Luminite Chisel",
+      "Auric Ingot",
+      "Luminite Plated Helm",
+      "Luminite Ore Concentrate"
+    ]
+  },
+  "Farming Station": {
+    "total_recipes": 4,
+    "unique_items": 4,
+    "skill_breakdown": {
+      "Mining (Level 0)": 2,
+      "Masonry (Level 1)": 1,
+      "Cooking (Level 1)": 1
+    },
+    "output_breakdown": {
+      "Output 1": 3,
+      "Output 10": 1
+    },
+    "sample_items": [
+      "Rough Braxite",
+      "Basic Embergrain Flour",
+      "Crushed Rough Shells",
+      "Crushed Ferralith Ore"
+    ]
+  },
+  "Carpentry Station": {
+    "total_recipes": 63,
+    "unique_items": 55,
+    "skill_breakdown": {
+      "Masonry (Level 1)": 63
+    },
+    "output_breakdown": {
+      "Output 1": 63
+    },
+    "sample_items": [
+      "Rough Emerald Ring",
+      "Refined Rough Brick",
+      "Unfired Rough Brick",
+      "Uncut Rough Sapphire",
+      "Rough Diamond Fragment",
+      "Rough Ruby Fragment",
+      "Rough Emerald Fragment",
+      "Rough Umbura Fang Amulet",
+      "Rough Ruby Ring",
+      "Uncut Rough Diamond"
+    ]
+  },
+  "Scholar Station": {
+    "total_recipes": 50,
+    "unique_items": 50,
+    "skill_breakdown": {
+      "Smithing (Level 1)": 50
+    },
+    "output_breakdown": {
+      "Output 1": 49,
+      "Output 5": 1
+    },
+    "sample_items": [
+      "Ferralith Shortsword",
+      "Ferralith Frames",
+      "Ferralith Crossbow",
+      "Elenvar Ingot Package",
+      "Blacksmith's Key",
+      "Ferralith Chisel",
+      "Refined Rathium Ingot Package",
+      "Refined Luminite Ingot Package",
+      "Refined Elenvar Ingot Package",
+      "Ferralith Plated Boots"
+    ]
+  },
+  "Fishing Station": {
+    "total_recipes": 1,
+    "unique_items": 1,
+    "skill_breakdown": {
+      "Smithing (Level 1)": 1
+    },
+    "output_breakdown": {
+      "Output 1": 1
+    },
+    "sample_items": [
+      "Molten Ferralith"
+    ]
+  },
+  "Simple Smithing Station": {
+    "total_recipes": 4,
+    "unique_items": 4,
+    "skill_breakdown": {
+      "Forestry (Level 1)": 1,
+      "Masonry (Level 1)": 3
+    },
+    "output_breakdown": {
+      "Output 1": 4
+    },
+    "sample_items": [
+      "Simple Charcoal",
+      "Simple Brick",
+      "Simple Forester's Pot",
+      "Simple Glass"
+    ]
+  },
+  "Simple Cooking Station": {
+    "total_recipes": 4,
+    "unique_items": 4,
+    "skill_breakdown": {
+      "Carpentry (Level 20)": 4
+    },
+    "output_breakdown": {
+      "Output 1": 4
+    },
+    "sample_items": [
+      "Simple Stripped Wood",
+      "Refined Simple Plank",
+      "Simple Timber",
+      "Simple Plank"
+    ]
+  },
+  "Simple Farming Station": {
+    "total_recipes": 4,
+    "unique_items": 4,
+    "skill_breakdown": {
+      "Masonry (Level 1)": 3,
+      "Cooking (Level 1)": 1
+    },
+    "output_breakdown": {
+      "Output 1": 3,
+      "Output 10": 1
+    },
+    "sample_items": [
+      "Crushed Simple Shells",
+      "Simple Braxite",
+      "Crushed Pyrelite Ore",
+      "Simple Embergrain Flour"
+    ]
+  },
+  "Simple Carpentry Station": {
+    "total_recipes": 33,
+    "unique_items": 25,
+    "skill_breakdown": {
+      "Masonry (Level 20)": 33
+    },
+    "output_breakdown": {
+      "Output 1": 33
+    },
+    "sample_items": [
+      "Simple Brick Slab",
+      "Simple Diamond",
+      "Simple Glass Vial",
+      "Refined Simple Brick",
+      "Simple Emerald Fragment",
+      "Uncut Simple Ruby",
+      "Simple Jakyl Fang Amulet",
+      "Simple Umbura Fang Amulet",
+      "Simple Emerald Ring",
+      "Simple Sapphire Fragment"
+    ]
+  },
+  "Simple Scholar Station": {
+    "total_recipes": 53,
+    "unique_items": 29,
+    "skill_breakdown": {
+      "Smithing (Level 20)": 53
+    },
+    "output_breakdown": {
+      "Output 1": 52,
+      "Output 5": 1
+    },
+    "sample_items": [
+      "Pyrelite Quill",
+      "Pyrelite Bow",
+      "Pyrelite Ingot",
+      "Pyrelite Machete",
+      "Pyrelite Plated Boots",
+      "Pyrelite Plated Armor",
+      "Pyrelite Rod",
+      "Pyrelite Daggers",
+      "Pyrelite Plated Belt",
+      "Pyrelite Hammer"
+    ]
+  },
+  "Simple Fishing Station": {
+    "total_recipes": 1,
+    "unique_items": 1,
+    "skill_breakdown": {
+      "Smithing (Level 1)": 1
+    },
+    "output_breakdown": {
+      "Output 1": 1
+    },
+    "sample_items": [
+      "Molten Pyrelite"
+    ]
+  },
+  "Peerless Scholar Station": {
+    "total_recipes": 245,
+    "unique_items": 29,
+    "skill_breakdown": {
+      "Smithing (Level 60)": 245
+    },
+    "output_breakdown": {
+      "Output 1": 244,
+      "Output 5": 1
+    },
+    "sample_items": [
+      "Rathium Rod",
+      "Rathium Chisel",
+      "Rathium Bow",
+      "Rathium Mace",
+      "Rathium Knife",
+      "Rathium Saw",
+      "Rathium Ingot",
+      "Rathium Plated Belt",
+      "Refined Rathium Ingot",
+      "Rathium Claymore"
+    ]
+  },
+  "Sturdy Smithing Station": {
+    "total_recipes": 4,
+    "unique_items": 4,
+    "skill_breakdown": {
+      "Forestry (Level 1)": 1,
+      "Masonry (Level 1)": 3
+    },
+    "output_breakdown": {
+      "Output 1": 4
+    },
+    "sample_items": [
+      "Sturdy Brick",
+      "Sturdy Forester's Pot",
+      "Sturdy Glass",
+      "Sturdy Charcoal"
+    ]
+  },
+  "Sturdy Cooking Station": {
+    "total_recipes": 4,
+    "unique_items": 4,
+    "skill_breakdown": {
+      "Carpentry (Level 30)": 4
+    },
+    "output_breakdown": {
+      "Output 1": 4
+    },
+    "sample_items": [
+      "Sturdy Stripped Wood",
+      "Refined Sturdy Plank",
+      "Sturdy Timber",
+      "Sturdy Plank"
+    ]
+  },
+  "Fine Smithing Station": {
+    "total_recipes": 4,
+    "unique_items": 4,
+    "skill_breakdown": {
+      "Forestry (Level 1)": 1,
+      "Masonry (Level 1)": 3
+    },
+    "output_breakdown": {
+      "Output 1": 4
+    },
+    "sample_items": [
+      "Fine Glass",
+      "Fine Charcoal",
+      "Fine Forester's Pot",
+      "Fine Brick"
+    ]
+  },
+  "Fine Cooking Station": {
+    "total_recipes": 4,
+    "unique_items": 4,
+    "skill_breakdown": {
+      "Carpentry (Level 40)": 4
+    },
+    "output_breakdown": {
+      "Output 1": 4
+    },
+    "sample_items": [
+      "Fine Plank",
+      "Fine Stripped Wood",
+      "Fine Timber",
+      "Refined Fine Plank"
+    ]
+  },
+  "Fine Farming Station": {
+    "total_recipes": 4,
+    "unique_items": 4,
+    "skill_breakdown": {
+      "Masonry (Level 1)": 3,
+      "Cooking (Level 1)": 1
+    },
+    "output_breakdown": {
+      "Output 1": 3,
+      "Output 10": 1
+    },
+    "sample_items": [
+      "Crushed Elenvar Ore",
+      "Fine Braxite",
+      "Crushed Fine Shells",
+      "Fine Embergrain Flour"
+    ]
+  },
+  "Fine Carpentry Station": {
+    "total_recipes": 33,
+    "unique_items": 25,
+    "skill_breakdown": {
+      "Masonry (Level 40)": 33
+    },
+    "output_breakdown": {
+      "Output 1": 33
+    },
+    "sample_items": [
+      "Unfired Fine Brick",
+      "Fine Ruby",
+      "Fine Unfired Forester's Pot",
+      "Fine Emerald Fragment",
+      "Uncut Fine Sapphire",
+      "Fine Diamond Ring",
+      "Fine Umbura Fang Amulet",
+      "Fine Sapphire Fragment",
+      "Fine Potter's Mix",
+      "Uncut Fine Ruby"
+    ]
+  },
+  "Fine Fishing Station": {
+    "total_recipes": 1,
+    "unique_items": 1,
+    "skill_breakdown": {
+      "Smithing (Level 1)": 1
+    },
+    "output_breakdown": {
+      "Output 1": 1
+    },
+    "sample_items": [
+      "Molten Elenvar"
+    ]
+  },
+  "Exquisite Smithing Station": {
+    "total_recipes": 4,
+    "unique_items": 4,
+    "skill_breakdown": {
+      "Forestry (Level 1)": 1,
+      "Masonry (Level 1)": 3
+    },
+    "output_breakdown": {
+      "Output 1": 4
+    },
+    "sample_items": [
+      "Exquisite Forester's Pot",
+      "Exquisite Charcoal",
+      "Exquisite Brick",
+      "Exquisite Glass"
+    ]
+  },
+  "Exquisite Cooking Station": {
+    "total_recipes": 4,
+    "unique_items": 4,
+    "skill_breakdown": {
+      "Carpentry (Level 50)": 4
+    },
+    "output_breakdown": {
+      "Output 1": 4
+    },
+    "sample_items": [
+      "Exquisite Timber",
+      "Exquisite Stripped Wood",
+      "Refined Exquisite Plank",
+      "Exquisite Plank"
+    ]
+  },
+  "Peerless Cooking Station": {
+    "total_recipes": 4,
+    "unique_items": 4,
+    "skill_breakdown": {
+      "Carpentry (Level 60)": 4
+    },
+    "output_breakdown": {
+      "Output 1": 4
+    },
+    "sample_items": [
+      "Peerless Plank",
+      "Peerless Stripped Wood",
+      "Peerless Timber",
+      "Refined Peerless Plank"
+    ]
+  },
+  "Peerless Smithing Station": {
+    "total_recipes": 12,
+    "unique_items": 12,
+    "skill_breakdown": {
+      "Masonry (Level 1)": 12
+    },
+    "output_breakdown": {
+      "Output 1": 12
+    },
+    "sample_items": [
+      "Peerless Brick",
+      "Magnificient Brick",
+      "Pristine Forester's Pot",
+      "Ornate Glass",
+      "Magnificient Glass",
+      "Magnificient Forester's Pot",
+      "Peerless Glass",
+      "Pristine Glass",
+      "Pristine Brick",
+      "Ornate Brick"
+    ]
+  },
+  "Peerless Farming Station": {
+    "total_recipes": 2,
+    "unique_items": 2,
+    "skill_breakdown": {
+      "Masonry (Level 1)": 2
+    },
+    "output_breakdown": {
+      "Output 1": 2
+    },
+    "sample_items": [
+      "Crushed Rathium Ore",
+      "Peerless Braxite"
+    ]
+  },
+  "Peerless Fishing Station": {
+    "total_recipes": 1,
+    "unique_items": 1,
+    "skill_breakdown": {
+      "Smithing (Level 1)": 1
+    },
+    "output_breakdown": {
+      "Output 1": 1
+    },
+    "sample_items": [
+      "Molten Rathium"
+    ]
+  },
+  "Magnificent Scholar Station": {
+    "total_recipes": 269,
+    "unique_items": 29,
+    "skill_breakdown": {
+      "Smithing (Level 90)": 269
+    },
+    "output_breakdown": {
+      "Output 1": 268,
+      "Output 5": 1
+    },
+    "sample_items": [
+      "Umbracite Axe",
+      "Umbracite Plated Belt",
+      "Umbracite Pickaxe",
+      "Umbracite Spear & Shield",
+      "Umbracite Plated Legguards",
+      "Umbracite Hoe",
+      "Umbracite Ingot",
+      "Umbracite Crossbow",
+      "Umbracite Quill",
+      "Umbracite Rod"
+    ]
+  },
+  "Tier 10 Scholar Station": {
+    "total_recipes": 269,
+    "unique_items": 29,
+    "skill_breakdown": {
+      "Smithing (Level 100)": 269
+    },
+    "output_breakdown": {
+      "Output 1": 268,
+      "Output 5": 1
+    },
+    "sample_items": [
+      "Astralite Machete",
+      "Astralite Scissors",
+      "Astralite Plated Helm",
+      "Astralite Rod",
+      "Astralite Hammer",
+      "Astralite Plated Boots",
+      "Astralite Pickaxe",
+      "Astralite Plated Legguards",
+      "Astralite Shortsword",
+      "Astralite Ingot"
+    ]
+  },
+  "Masterwork Scholar Station": {
+    "total_recipes": 269,
+    "unique_items": 29,
+    "skill_breakdown": {
+      "Smithing (Level 80)": 269
+    },
+    "output_breakdown": {
+      "Output 1": 268,
+      "Output 5": 1
+    },
+    "sample_items": [
+      "Celestium Bow",
+      "Celestium Plated Armor",
+      "Celestium Rod",
+      "Celestium Spear & Shield",
+      "Celestium Nails",
+      "Celestium Plated Bracers",
+      "Celestium Crossbow",
+      "Celestium Frames",
+      "Celestium Shortsword",
+      "Celestium Mace"
+    ]
+  },
+  "Legendary Carpentry Station": {
+    "total_recipes": 33,
+    "unique_items": 25,
+    "skill_breakdown": {
+      "Masonry (Level 70)": 33
+    },
+    "output_breakdown": {
+      "Output 1": 33
+    },
+    "sample_items": [
+      "Ornate Diamond",
+      "Ornate Ruby Fragment",
+      "Ornate Potter's Mix",
+      "Ornate Brick Slab",
+      "Uncut Ornate Ruby",
+      "Uncut Ornate Sapphire",
+      "Ornate Emerald",
+      "Uncut Ornate Emerald",
+      "Ornate Sapphire Fragment",
+      "Ornate Ruby Ring"
+    ]
+  },
+  "Masterwork Cooking Station": {
+    "total_recipes": 4,
+    "unique_items": 4,
+    "skill_breakdown": {
+      "Carpentry (Level 80)": 4
+    },
+    "output_breakdown": {
+      "Output 1": 4
+    },
+    "sample_items": [
+      "Pristine Plank",
+      "Refined Pristine Plank",
+      "Pristine Stripped Wood",
+      "Pristine Timber"
+    ]
+  },
+  "Legendary Scholar Station": {
+    "total_recipes": 269,
+    "unique_items": 29,
+    "skill_breakdown": {
+      "Smithing (Level 70)": 269
+    },
+    "output_breakdown": {
+      "Output 1": 268,
+      "Output 5": 1
+    },
+    "sample_items": [
+      "Aurumite Frames",
+      "Aurumite Quill",
+      "Aurumite Daggers",
+      "Aurumite Plated Bracers",
+      "Aurumite Nails",
+      "Aurumite Machete",
+      "Aurumite Shortsword",
+      "Aurumite Plated Legguards",
+      "Aurumite Crossbow",
+      "Aurumite Saw"
+    ]
+  },
+  "Tier 10 Carpentry Station": {
+    "total_recipes": 33,
+    "unique_items": 25,
+    "skill_breakdown": {
+      "Masonry (Level 100)": 33
+    },
+    "output_breakdown": {
+      "Output 1": 33
+    },
+    "sample_items": [
+      "Uncut Flawless Ruby",
+      "Flawless Diamond",
+      "Uncut Flawless Emerald",
+      "Flawless Sapphire Ring",
+      "Uncut Flawless Diamond",
+      "Flawless Emerald Ring",
+      "Flawless Ruby",
+      "Flawless Diamond Fragment",
+      "Flawless Jakyl Fang Amulet",
+      "Flawless Ruby Ring"
+    ]
+  },
+  "Masterwork Carpentry Station": {
+    "total_recipes": 32,
+    "unique_items": 24,
+    "skill_breakdown": {
+      "Masonry (Level 80)": 32
+    },
+    "output_breakdown": {
+      "Output 1": 32
+    },
+    "sample_items": [
+      "Pristine Emerald Fragment",
+      "Uncut Pristine Sapphire",
+      "Refined Pristine Brick",
+      "Pristine Ruby Ring",
+      "Pristine Diamond Fragment",
+      "Pristine Emerald Ring",
+      "Pristine Brick Slab",
+      "Pristine Emerald",
+      "Unfired Pristine Brick",
+      "Pristine Sapphire"
+    ]
+  },
+  "Tier 10 Cooking Station": {
+    "total_recipes": 4,
+    "unique_items": 4,
+    "skill_breakdown": {
+      "Carpentry (Level 100)": 4
+    },
+    "output_breakdown": {
+      "Output 1": 4
+    },
+    "sample_items": [
+      "Flawless Timber",
+      "Flawless Stripped Wood",
+      "Refined Flawless Plank",
+      "Flawless Plank"
+    ]
+  },
+  "Tier 10 Fishing Station": {
+    "total_recipes": 1,
+    "unique_items": 1,
+    "skill_breakdown": {
+      "Smithing (Level 1)": 1
+    },
+    "output_breakdown": {
+      "Output 1": 1
+    },
+    "sample_items": [
+      "Molten Astralite"
+    ]
+  },
+  "Magnificent Carpentry Station": {
+    "total_recipes": 32,
+    "unique_items": 24,
+    "skill_breakdown": {
+      "Masonry (Level 90)": 32
+    },
+    "output_breakdown": {
+      "Output 1": 32
+    },
+    "sample_items": [
+      "Magnificient Glass Vial",
+      "Uncut Magnificient Diamond",
+      "Magnificient Diamond Ring",
+      "Unfired Magnificient Brick",
+      "Magnificient Unfired Forester's Pot",
+      "Magnificient Ruby Fragment",
+      "Magnificient Gem Encrusted Ring",
+      "Magnificient Diamond",
+      "Magnificient Sapphire Fragment",
+      "Uncut Magnificient Ruby"
+    ]
+  },
+  "Legendary Cooking Station": {
+    "total_recipes": 4,
+    "unique_items": 4,
+    "skill_breakdown": {
+      "Carpentry (Level 70)": 4
+    },
+    "output_breakdown": {
+      "Output 1": 4
+    },
+    "sample_items": [
+      "Ornate Timber",
+      "Ornate Plank",
+      "Ornate Stripped Wood",
+      "Refined Ornate Plank"
+    ]
+  },
+  "Legendary Smithing Station": {
+    "total_recipes": 3,
+    "unique_items": 3,
+    "skill_breakdown": {
+      "Masonry (Level 1)": 3
+    },
+    "output_breakdown": {
+      "Output 1": 3
+    },
+    "sample_items": [
+      "Flawless Glass",
+      "Flawless Brick",
+      "Flawless Forester's Pot"
+    ]
+  },
+  "Magnificent Farming Station": {
+    "total_recipes": 2,
+    "unique_items": 2,
+    "skill_breakdown": {
+      "Masonry (Level 1)": 2
+    },
+    "output_breakdown": {
+      "Output 1": 2
+    },
+    "sample_items": [
+      "Magnificient Braxite",
+      "Crushed Umbracite Ore"
+    ]
+  },
+  "Magnificent Cooking Station": {
+    "total_recipes": 4,
+    "unique_items": 4,
+    "skill_breakdown": {
+      "Carpentry (Level 90)": 4
+    },
+    "output_breakdown": {
+      "Output 1": 4
+    },
+    "sample_items": [
+      "Magnificient Stripped Wood",
+      "Refined Magnificient Plank",
+      "Magnificient Plank",
+      "Magnificient Timber"
+    ]
+  },
+  "Legendary Farming Station": {
+    "total_recipes": 2,
+    "unique_items": 2,
+    "skill_breakdown": {
+      "Masonry (Level 1)": 2
+    },
+    "output_breakdown": {
+      "Output 1": 2
+    },
+    "sample_items": [
+      "Ornate Braxite",
+      "Crushed Aurumite Ore"
+    ]
+  },
+  "Magnificent Fishing Station": {
+    "total_recipes": 1,
+    "unique_items": 1,
+    "skill_breakdown": {
+      "Smithing (Level 1)": 1
+    },
+    "output_breakdown": {
+      "Output 1": 1
+    },
+    "sample_items": [
+      "Molten Umbracite"
+    ]
+  },
+  "Masterwork Farming Station": {
+    "total_recipes": 2,
+    "unique_items": 2,
+    "skill_breakdown": {
+      "Masonry (Level 1)": 2
+    },
+    "output_breakdown": {
+      "Output 1": 2
+    },
+    "sample_items": [
+      "Crushed Celestium Ore",
+      "Pristine Braxite"
+    ]
+  },
+  "Tier 10 Farming Station": {
+    "total_recipes": 2,
+    "unique_items": 2,
+    "skill_breakdown": {
+      "Masonry (Level 1)": 2
+    },
+    "output_breakdown": {
+      "Output 1": 2
+    },
+    "sample_items": [
+      "Flawless Braxite",
+      "Crushed Astralite Ore"
+    ]
+  },
+  "Masterwork Fishing Station": {
+    "total_recipes": 1,
+    "unique_items": 1,
+    "skill_breakdown": {
+      "Smithing (Level 1)": 1
+    },
+    "output_breakdown": {
+      "Output 1": 1
+    },
+    "sample_items": [
+      "Molten Celestium"
+    ]
+  },
+  "Legendary Fishing Station": {
+    "total_recipes": 1,
+    "unique_items": 1,
+    "skill_breakdown": {
+      "Smithing (Level 1)": 1
+    },
+    "output_breakdown": {
+      "Output 1": 1
+    },
+    "sample_items": [
+      "Molten Aurumite"
+    ]
+  }
+}

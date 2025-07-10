@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useItemsStore } from '../state/useItemsStore';
 import ItemList from './ItemList';
 import BuildList from './BuildList';
@@ -8,123 +8,48 @@ import BuildSteps from './BuildSteps';
 import RecipeResolverView from './RecipeResolverView';
 
 const BitCalculatorPage: React.FC = () => {
-  const [activeView, setActiveView] = useState<'steps' | 'materials' | 'inventory' | 'resolver'>('steps');
-  const [selectedItemForResolver, setSelectedItemForResolver] = useState<{
-    itemId: string;
-    quantity: number;
-    recipeIndex: number;
-  } | null>(null);
   const { buildList } = useItemsStore();
 
   return (
-    <div className="h-full flex flex-col">
-      {/* Header - Compact */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4 rounded-xl mb-4 shadow-lg">
-        <h1 className="text-2xl font-bold mb-1">🧮 Bit Calculator</h1>
-        <p className="text-blue-100 text-sm">
-          Plan your builds, manage inventory, and optimize crafting paths
-        </p>
+    <div className="container mx-auto p-4">
+      {/* Personal Inventory Notice */}
+      <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+        <div className="flex items-start">
+          <div className="flex-shrink-0">
+            <div className="text-green-400 text-xl">🎒</div>
+          </div>
+          <div className="ml-3">
+            <h3 className="text-sm font-medium text-green-800">Personal BitCraft Calculator</h3>
+            <div className="mt-2 text-sm text-green-700">
+              <p className="mb-2">
+                <strong>This calculator uses your personal inventory</strong> - completely separate from settlement inventories.
+              </p>
+              <ul className="list-disc list-inside space-y-1">
+                <li><strong>Personal Inventory:</strong> Your private crafting materials, not shared with settlements</li>
+                <li><strong>Personal Build List:</strong> Your individual crafting projects and planning</li>
+                <li><strong>Settlement Work:</strong> For collaborative projects, use the Settlement System instead</li>
+              </ul>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 min-h-0">
-        {/* Left Panel - Item Selection */}
-        <div className="lg:col-span-1">
-          <div className="bg-white rounded-xl p-4 shadow-lg border border-slate-200 h-full flex flex-col">
-            <h2 className="text-lg font-bold text-slate-800 mb-3 border-b border-slate-200 pb-2">
-              📦 Select Items
-            </h2>
-            <div className="flex-1 min-h-0">
-              <ItemList showAddToBuilds={true} />
-            </div>
-          </div>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Left Column - Item List & Inventory */}
+        <div className="lg:col-span-5 space-y-6">
+          <ItemList showAddToBuilds={true} />
+          <InventoryInput />
         </div>
-
-        {/* Middle Panel - Build List */}
-        <div className="lg:col-span-1">
-          <div className="bg-white rounded-xl p-4 shadow-lg border border-slate-200 h-full flex flex-col">
-            <div className="flex items-center justify-between mb-3 border-b border-slate-200 pb-2">
-              <h2 className="text-lg font-bold text-slate-800">
-                🎯 Build List
-              </h2>
-              {buildList.length > 0 && (
-                <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-semibold">
-                  {buildList.length}
-                </span>
-              )}
-            </div>
-            <div className="flex-1 min-h-0">
-              <BuildList 
-                onSelectForResolver={(itemId, quantity, recipeIndex) => {
-                  setSelectedItemForResolver({ itemId, quantity, recipeIndex });
-                  setActiveView('resolver');
-                }}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Right Panel - Materials & Inventory */}
-        <div className="lg:col-span-1">
-          <div className="bg-white rounded-xl p-4 shadow-lg border border-slate-200 h-full flex flex-col">
-            {/* Tab Navigation - Compact */}
-            <div className="grid grid-cols-4 bg-slate-100 rounded-lg p-0.5 mb-3 gap-0.5">
-              <button
-                onClick={() => setActiveView('steps')}
-                className={`py-1.5 px-1 rounded-md font-medium text-xs transition-all duration-200 ${
-                  activeView === 'steps'
-                    ? 'bg-white text-slate-800 shadow-sm'
-                    : 'text-slate-600 hover:text-slate-800'
-                }`}
-              >
-                🔧 Steps
-              </button>
-              <button
-                onClick={() => setActiveView('materials')}
-                className={`py-1.5 px-1 rounded-md font-medium text-xs transition-all duration-200 ${
-                  activeView === 'materials'
-                    ? 'bg-white text-slate-800 shadow-sm'
-                    : 'text-slate-600 hover:text-slate-800'
-                }`}
-              >
-                📋 Materials
-              </button>
-              <button
-                onClick={() => setActiveView('inventory')}
-                className={`py-1.5 px-1 rounded-md font-medium text-xs transition-all duration-200 ${
-                  activeView === 'inventory'
-                    ? 'bg-white text-slate-800 shadow-sm'
-                    : 'text-slate-600 hover:text-slate-800'
-                }`}
-              >
-                📦 Inventory
-              </button>
-              <button
-                onClick={() => setActiveView('resolver')}
-                className={`py-1.5 px-1 rounded-md font-medium text-xs transition-all duration-200 ${
-                  activeView === 'resolver'
-                    ? 'bg-white text-slate-800 shadow-sm'
-                    : 'text-slate-600 hover:text-slate-800'
-                }`}
-              >
-                📘 Resolver
-              </button>
-            </div>
-
-            {/* Content */}
-            <div className="flex-1 min-h-0">
-              {activeView === 'steps' && <BuildSteps />}
-              {activeView === 'materials' && <MaterialSummary />}
-              {activeView === 'inventory' && <InventoryInput />}
-              {activeView === 'resolver' && (
-                <RecipeResolverView
-                  targetItemId={selectedItemForResolver?.itemId}
-                  targetQuantity={selectedItemForResolver?.quantity}
-                  recipeIndex={selectedItemForResolver?.recipeIndex}
-                />
-              )}
-            </div>
-          </div>
+        
+        {/* Right Column - Build List & Materials */}
+        <div className="lg:col-span-7 space-y-6">
+          <BuildList />
+          {buildList.length > 0 && (
+            <>
+              <MaterialSummary />
+              <BuildSteps />
+            </>
+          )}
         </div>
       </div>
     </div>
