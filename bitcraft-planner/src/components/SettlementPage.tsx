@@ -1446,13 +1446,6 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
                 <h2 className="text-xl font-bold">👥 Settlement Members</h2>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => updateUserDisplayName('Artzp')}
-                    className="px-3 py-1 bg-purple-500 text-white rounded hover:bg-purple-600 text-sm"
-                    title="Update your display name to Artzp for privacy"
-                  >
-                    🔒 Set Display Name to Artzp
-                  </button>
-                  <button
                     onClick={() => setShowInviteDialog(true)}
                     className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
                     disabled={!currentSettlement}
