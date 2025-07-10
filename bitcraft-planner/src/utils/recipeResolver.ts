@@ -90,6 +90,7 @@ export class RecipeResolver {
     const effectiveInventoryQuantity = this.getEffectiveInventoryQuantity(itemId);
 
     // Check if we have enough in inventory (full or partial coverage)
+    // If we have enough, completely prune this branch - don't process any ingredients
     if (effectiveInventoryQuantity >= quantity) {
       this.addToMaterialMap(itemId, quantity, inventoryQuantity, false, 'already_available');
       return {
@@ -100,7 +101,7 @@ export class RecipeResolver {
         available: effectiveInventoryQuantity,
         craft: false,
         status: 'already_available',
-        ingredients: []
+        ingredients: [] // PRUNED: No sub-ingredients when we already have this item
       };
     }
 
