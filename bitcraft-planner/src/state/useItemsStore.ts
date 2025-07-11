@@ -25,13 +25,23 @@ export interface MaterialRequirement {
   missing: number;
 }
 
+interface FilterOptions {
+  searchTerm: string;
+  tier: number | null;
+  rarity: number | null;
+  recipeType: 'all' | 'craftable' | 'base' | null;
+  profession: string | null;
+}
+
+interface SortOptions {
+  by: 'name' | 'tier' | 'rarity';
+  direction: 'asc' | 'desc';
+}
+
 interface ItemsStore {
   items: ItemsData;
-  searchTerm: string;
-  tierFilter: number | null;
-  rarityFilter: number | null;
-  recipeTypeFilter: 'all' | 'craftable' | 'base' | null;
-  professionFilter: string | null;
+  filters: FilterOptions;
+  sort: SortOptions;
   isLoading: boolean;
   inventory: Inventory;
   showInventoryManager: boolean;
@@ -57,6 +67,10 @@ interface ItemsStore {
   setBuildList: (buildList: BuildListItem[]) => void;
   clearBuildList: () => void;
   
+  // New combined methods
+  setFilter: (filter: Partial<FilterOptions>) => void;
+  setSort: (sort: Partial<SortOptions>) => void;
+  
   getFilteredItems: () => [string, Item][];
   getInventoryQuantity: (itemId: string) => number;
   getEffectiveInventoryQuantity: (itemId: string) => number;
@@ -66,22 +80,38 @@ interface ItemsStore {
 
 export const useItemsStore = create<ItemsStore>((set, get) => ({
   items: {},
-  searchTerm: '',
-  tierFilter: null,
-  rarityFilter: null,
-  recipeTypeFilter: 'craftable',
-  professionFilter: null,
+  filters: {
+    searchTerm: '',
+    tier: null,
+    rarity: null,
+    recipeType: 'craftable',
+    profession: null,
+  },
+  sort: {
+    by: 'tier',
+    direction: 'asc',
+  },
   isLoading: true,
   inventory: {},
   showInventoryManager: false,
   buildList: [],
   
   setItems: (items) => set({ items }),
-  setSearchTerm: (term) => set({ searchTerm: term }),
-  setTierFilter: (tier) => set({ tierFilter: tier }),
-  setRarityFilter: (rarity) => set({ rarityFilter: rarity }),
-  setRecipeTypeFilter: (type) => set({ recipeTypeFilter: type }),
-  setProfessionFilter: (profession) => set({ professionFilter: profession }),
+  // Remove individual filter setters
+  setSearchTerm: (term) => set(state => ({ filters: { ...state.filters, searchTerm: term }})),
+  setTierFilter: (tier) => set(state => ({ filters: { ...state.filters, tier }})),
+  setRarityFilter: (rarity) => set(state => ({ filters: { ...state.filters, rarity }})),
+  setRecipeTypeFilter: (type) => set(state => ({ filters: { ...state.filters, recipeType: type }})),
+  setProfessionFilter: (profession) => set(state => ({ filters: { ...state.filters, profession }})),
+  
+  // New combined setters
+  setFilter: (newFilters) => set(state => ({
+    filters: { ...state.filters, ...newFilters }
+  })),
+  setSort: (newSort) => set(state => ({
+    sort: { ...state.sort, ...newSort }
+  })),
+
   setIsLoading: (loading) => set({ isLoading: loading }),
   setInventory: (inventory) => set({ inventory }),
   setInventoryItem: (itemId, quantity) => set((state) => ({
@@ -134,42 +164,53 @@ export const useItemsStore = create<ItemsStore>((set, get) => ({
   clearBuildList: () => set({ buildList: [] }),
   
   getFilteredItems: () => {
-    const state = get();
-    const { items, searchTerm, tierFilter, rarityFilter, recipeTypeFilter } = state;
+    const { items, filters, sort } = get();
     
     let filtered = Object.entries(items);
     
-    // Apply search filter first for better performance
-    if (searchTerm.trim()) {
-      const searchLower = searchTerm.toLowerCase();
+    // Apply search filter
+    if (filters.searchTerm.trim()) {
+      const searchLower = filters.searchTerm.toLowerCase();
       filtered = filtered.filter(([_, item]) => 
         item.name.toLowerCase().includes(searchLower)
       );
     }
     
     // Apply tier filter
-    if (tierFilter !== null) {
-      filtered = filtered.filter(([_, item]) => item.tier === tierFilter);
+    if (filters.tier !== null) {
+      filtered = filtered.filter(([_, item]) => item.tier === filters.tier);
     }
     
     // Apply rarity filter
-    if (rarityFilter !== null) {
-      filtered = filtered.filter(([_, item]) => item.rarity === rarityFilter);
+    if (filters.rarity !== null) {
+      filtered = filtered.filter(([_, item]) => item.rarity === filters.rarity);
     }
     
     // Apply recipe type filter
-    if (recipeTypeFilter === 'craftable') {
+    if (filters.recipeType === 'craftable') {
       filtered = filtered.filter(([_, item]) => item.recipes && item.recipes.length > 0);
-    } else if (recipeTypeFilter === 'base') {
+    } else if (filters.recipeType === 'base') {
       filtered = filtered.filter(([_, item]) => !item.recipes || item.recipes.length === 0);
     }
+
+    // Apply profession filter (future)
+    if (filters.profession) {
+      // Logic to filter by profession/crafting station
+    }
     
-    // Sort by tier first, then by name for better organization
+    // Apply sorting
     filtered.sort(([, a], [, b]) => {
-      if (a.tier !== b.tier) {
-        return a.tier - b.tier;
+      let compareResult = 0;
+      
+      if (sort.by === 'tier') {
+        compareResult = a.tier - b.tier;
+      } else if (sort.by === 'rarity') {
+        compareResult = a.rarity - b.rarity;
+      } else { // 'name'
+        compareResult = a.name.localeCompare(b.name);
       }
-      return a.name.localeCompare(b.name);
+      
+      return sort.direction === 'asc' ? compareResult : -compareResult;
     });
     
     return filtered;

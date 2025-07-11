@@ -1,59 +1,75 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useItemsStore } from '../state/useItemsStore';
 import ItemList from './ItemList';
 import BuildList from './BuildList';
 import MaterialSummary from './MaterialSummary';
 import InventoryInput from './InventoryInput';
 import BuildSteps from './BuildSteps';
-import RecipeResolverView from './RecipeResolverView';
 
 const BitCalculatorPage: React.FC = () => {
+  const [activeTab, setActiveTab] = useState('summary');
   const { buildList } = useItemsStore();
 
   return (
-    <div className="container mx-auto p-4">
-      {/* Personal Inventory Notice */}
-      <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-        <div className="flex items-start">
-          <div className="flex-shrink-0">
-            <div className="text-green-400 text-xl">🎒</div>
+    <div className="flex-grow flex flex-col md:flex-row gap-6 p-6 h-[calc(100vh-150px)]">
+      {/* Left Panel: Item Catalog */}
+      <div className="w-full md:w-5/12 lg:w-4/12 flex flex-col h-full">
+        <ItemList showAddToBuilds={true} />
+      </div>
+
+      {/* Center Panel: Build Queue */}
+      <div className="w-full md:w-3/12 lg:w-3/12 flex flex-col h-full">
+        <div className="bg-gray-800 rounded-lg flex-1 flex flex-col text-white">
+          <div className="p-4 border-b border-gray-700">
+            <h2 className="text-lg font-bold">Build Queue</h2>
           </div>
-          <div className="ml-3">
-            <h3 className="text-sm font-medium text-green-800">Personal BitCraft Calculator</h3>
-            <div className="mt-2 text-sm text-green-700">
-              <p className="mb-2">
-                <strong>This calculator uses your personal inventory</strong> - completely separate from settlement inventories.
-              </p>
-              <ul className="list-disc list-inside space-y-1">
-                <li><strong>Personal Inventory:</strong> Your private crafting materials, not shared with settlements</li>
-                <li><strong>Personal Build List:</strong> Your individual crafting projects and planning</li>
-                <li><strong>Settlement Work:</strong> For collaborative projects, use the Settlement System instead</li>
-              </ul>
-            </div>
+          <div className="flex-1 overflow-y-auto p-4">
+            <BuildList />
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column - Item List & Inventory */}
-        <div className="lg:col-span-5 space-y-6">
-          <ItemList showAddToBuilds={true} />
-          <InventoryInput />
-        </div>
-        
-        {/* Right Column - Build List & Materials */}
-        <div className="lg:col-span-7 space-y-6">
-          <BuildList />
-          {buildList.length > 0 && (
-            <>
-              <MaterialSummary />
-              <BuildSteps />
-            </>
-          )}
+      {/* Right Panel: Inventory & Requirements */}
+      <div className="w-full md:w-4/12 lg:w-5/12 flex flex-col h-full">
+        <div className="bg-gray-800 rounded-lg flex-1 flex flex-col text-white">
+          {/* Tabs */}
+          <div className="flex border-b border-gray-700">
+            <TabButton title="Material Summary" activeTab={activeTab} setActiveTab={setActiveTab} tabName="summary" />
+            <TabButton title="Inventory" activeTab={activeTab} setActiveTab={setActiveTab} tabName="inventory" />
+            <TabButton title="Build Steps" activeTab={activeTab} setActiveTab={setActiveTab} tabName="steps" />
+          </div>
+
+          {/* Tab Content */}
+          <div className="flex-1 overflow-y-auto p-4">
+            {buildList.length === 0 ? (
+              <div className="flex items-center justify-center h-full text-center text-gray-400">
+                <div>
+                  <p className="font-semibold text-lg">Your build list is empty</p>
+                  <p className="text-sm">Add items from the catalog to get started</p>
+                </div>
+              </div>
+            ) : (
+              <>
+                {activeTab === 'summary' && <MaterialSummary />}
+                {activeTab === 'inventory' && <InventoryInput />}
+                {activeTab === 'steps' && <BuildSteps />}
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>
   );
 };
+
+const TabButton = ({ title, activeTab, setActiveTab, tabName }: { title: string, activeTab: string, setActiveTab: (name: string) => void, tabName: string }) => (
+  <button 
+    onClick={() => setActiveTab(tabName)} 
+    className={`flex-1 p-3 text-center font-medium text-sm transition-colors focus:outline-none 
+      ${activeTab === tabName ? 'text-white border-b-2 border-blue-500' : 'text-gray-400 hover:bg-gray-700 hover:text-white'}`}
+  >
+    {title}
+  </button>
+);
 
 export default BitCalculatorPage; 

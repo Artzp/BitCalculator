@@ -12,6 +12,7 @@ import { SaveStatusIndicator } from './components/SaveStatusIndicator';
 import { auth } from './firebase/config';
 import { projectLogger } from './utils/projectLogger';
 import { isAdmin } from './utils/adminCheck';
+import { Tabs } from './components/Tabs';
 import './App.css';
 
 // Deep comparison utility
@@ -82,6 +83,10 @@ function App() {
       delete (window as any).__setIsRestoring;
     };
   }, []);
+
+  const handleTabChange = (tab: 'calculator' | 'settlement') => {
+    setCurrentPage(tab);
+  };
 
   // Admin check
   useEffect(() => {
@@ -514,10 +519,12 @@ function App() {
           return;
         }
         
-        // Always attempt to save on page unload
+        // Some browsers require returnValue to be set
         e.preventDefault();
         e.returnValue = '';
-        // Quick save attempt - don't await as browser might close
+        
+        // Save data immediately
+        console.log('�� Saving before page unload...');
         // Get current settlement state directly from store to avoid stale React state
         const currentSettlement = useSettlementStore.getState().settlement;
         firebaseService.saveComplete(user.uid, inventory, buildList, currentSettlement || undefined);
@@ -531,7 +538,7 @@ function App() {
         window.removeEventListener('beforeunload', handleBeforeUnload);
       };
     }
-  }, [user, dataLoaded, inventory, buildList, settlement, isRestoring]);
+  }, [user, dataLoaded, inventory, buildList, isRestoring]);
 
   if (authLoading || isLoading) {
     return (
@@ -547,77 +554,21 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800">
-      <div className="w-full px-4 py-6">
-        <AuthHeader />
-        
-        {/* Save Status Indicator */}
-        {user && <SaveStatusIndicator saveStatus={saveStatus} />}
-        
-        {/* Navigation */}
-        <div className="mb-6">
-          <nav className="bg-white rounded-xl shadow-lg border border-slate-200">
-            <div className="flex">
-              <button
-                onClick={() => setCurrentPage('calculator')}
-                className={`flex-1 flex items-center justify-center gap-2 px-6 py-4 font-medium transition-all duration-200 rounded-l-xl ${
-                  currentPage === 'calculator'
-                    ? 'bg-blue-600 text-white shadow-lg'
-                    : 'text-slate-600 hover:text-slate-800 hover:bg-slate-50'
-                }`}
-              >
-                <span className="text-xl">🧮</span>
-                <span>Bit Calculator</span>
-              </button>
-              <button
-                onClick={() => setCurrentPage('settlement')}
-                className={`flex-1 flex items-center justify-center gap-2 px-6 py-4 font-medium transition-all duration-200 rounded-r-xl ${
-                  currentPage === 'settlement'
-                    ? 'bg-green-600 text-white shadow-lg'
-                    : 'text-slate-600 hover:text-slate-800 hover:bg-slate-50'
-                }`}
-              >
-                <span className="text-xl">🏘️</span>
-                <span>Settlement System</span>
-              </button>
-            </div>
-          </nav>
-        </div>
-        
-        {/* Loading overlay for user data - with timeout protection */}
-        {user && saveStatus.isLoading && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 text-center max-w-sm mx-4">
-              <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-              <p className="text-lg font-semibold mb-2">Loading your data...</p>
-              <p className="text-sm text-gray-600">
-                This should only take a few seconds
-              </p>
-            </div>
-          </div>
+    <div className="App bg-gray-100 min-h-screen">
+      <AuthHeader />
+      <SaveStatusIndicator saveStatus={saveStatus} />
+      
+      <div className="container mx-auto px-4 py-4">
+        <Tabs activeTab={currentPage} onTabClick={handleTabChange} />
+        {currentPage === 'calculator' && (
+          <BitCalculatorPage />
         )}
-        
-        {/* Error notification */}
-        {saveStatus.error && (
-          <div className="fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-50">
-            <p className="font-semibold">Save Error</p>
-            <p className="text-sm">{saveStatus.error}</p>
-          </div>
+        {currentPage === 'settlement' && (
+          <SettlementPage />
         )}
-        
-        {/* Main Application Content */}
-        <div className="h-[calc(100vh-280px)]">
-          {currentPage === 'calculator' ? (
-            <BitCalculatorPage />
-          ) : currentPage === 'settlement' ? (
-            <SettlementPage />
-          ) : (
-            <BitCalculatorPage />
-          )}
-        </div>
       </div>
     </div>
   );
 }
 
-export default App; 
+export default App;

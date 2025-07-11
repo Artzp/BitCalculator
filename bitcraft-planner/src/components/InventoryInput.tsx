@@ -1,204 +1,120 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useItemsStore } from '../state/useItemsStore';
 import { RARITY_COLORS, RARITY_NAMES } from '../utils/constants';
 
 const InventoryInput: React.FC = () => {
-  const { 
-    items, 
-    inventory, 
-    setInventoryItem, 
-    removeInventoryItem, 
-    clearInventory,
-    getAllPossibleMaterials,
-    getEffectiveInventoryQuantity 
-  } = useItemsStore();
-
+  const { inventory, setInventoryItem, removeInventoryItem, items } = useItemsStore();
   const [searchTerm, setSearchTerm] = useState('');
-  const [showOnlyRequired, setShowOnlyRequired] = useState(true);
+  const [selectedItem, setSelectedItem] = useState('');
+  const [quantity, setQuantity] = useState<number | string>(1);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
 
-  const allPossibleMaterials = getAllPossibleMaterials();
-  
-  const requiredItemIds = useMemo(() => {
-    return new Set(allPossibleMaterials.map(m => m.itemId));
-  }, [allPossibleMaterials]);
-
-  const filteredItems = useMemo(() => {
-    let itemList = Object.entries(items);
-
-    // Filter by required materials if enabled
-    if (showOnlyRequired && allPossibleMaterials.length > 0) {
-      itemList = itemList.filter(([itemId]) => requiredItemIds.has(itemId));
-    }
-
-    // Search filter
-    if (searchTerm) {
-      itemList = itemList.filter(([, item]) => 
-        item.name.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    return itemList.sort(([, a], [, b]) => a.name.localeCompare(b.name));
-  }, [items, searchTerm, showOnlyRequired, allPossibleMaterials, requiredItemIds]);
-
-  const inventoryItems = Object.entries(inventory).filter(([, quantity]) => quantity > 0);
-
-  const handleQuantityChange = (itemId: string, value: string) => {
-    const quantity = parseInt(value) || 0;
-    if (quantity <= 0) {
-      removeInventoryItem(itemId);
-    } else {
-      setInventoryItem(itemId, quantity);
+  const handleAdd = () => {
+    if (selectedItem && quantity) {
+      setInventoryItem(selectedItem, Number(quantity));
+      setSelectedItem('');
+      setQuantity(1);
+      setSearchTerm('');
     }
   };
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const filteredItems = Object.entries(items).filter(([id, item]) => 
+    item.name.toLowerCase().includes(searchTerm.toLowerCase()) && !inventory[id]
+  );
+  
+  const inventoryItems = Object.entries(inventory).map(([id, qty]) => ({
+    id,
+    ...items[id],
+    quantity: qty
+  })).sort((a, b) => a.name.localeCompare(b.name));
+
   return (
-    <div className="space-y-4 overflow-auto h-full">
-      {/* Controls */}
-      <div className="space-y-3">
-        <div>
+    <div className="space-y-4">
+      {/* Add to Inventory Form */}
+      <div className="p-4 bg-gray-700 rounded-lg">
+        <h3 className="font-bold text-lg mb-2 text-white">Add to Inventory</h3>
+        <div className="relative">
           <input
             type="text"
+            placeholder="Search for an item..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search items..."
-            className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full p-2 bg-gray-600 border border-gray-500 rounded-lg mb-2 text-white"
           />
-        </div>
-
-        <div className="flex items-center justify-between">
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={showOnlyRequired}
-              onChange={(e) => setShowOnlyRequired(e.target.checked)}
-              className="w-4 h-4 text-blue-600 bg-white border-slate-300 rounded focus:ring-blue-500"
-            />
-            <span className="text-slate-700">Show only required materials (all steps)</span>
-          </label>
-
-          {inventoryItems.length > 0 && (
-            <button
-              onClick={clearInventory}
-              className="text-sm bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1 rounded-md font-medium transition-colors"
-            >
-              Clear All
-            </button>
+          {showDropdown && searchTerm && (
+            <div className="absolute z-10 w-full bg-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+              {filteredItems.length > 0 ? (
+                filteredItems.slice(0, 100).map(([id, item]) => (
+                  <div
+                    key={id}
+                    onClick={() => {
+                      setSelectedItem(id);
+                      setSearchTerm(item.name);
+                      setShowDropdown(false);
+                    }}
+                    className="p-2 hover:bg-gray-500 cursor-pointer text-white"
+                  >
+                    {item.name} - T{item.tier}
+                  </div>
+                ))
+              ) : (
+                <div className="p-2 text-gray-400">No results found</div>
+              )}
+            </div>
           )}
+        </div>
+        <div className="flex items-center space-x-2">
+          <input
+            type="number"
+            value={quantity}
+            onChange={(e) => setQuantity(Number(e.target.value))}
+            className="w-24 p-2 bg-gray-600 border border-gray-500 rounded-lg text-white"
+            placeholder="Qty"
+          />
+          <button
+            onClick={handleAdd}
+            disabled={!selectedItem}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg disabled:bg-gray-500"
+          >
+            Add Item
+          </button>
         </div>
       </div>
 
-      {/* Current Inventory Summary */}
-      {inventoryItems.length > 0 && (
-        <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-          <h4 className="font-bold text-slate-800 mb-3">
-            📦 Current Inventory ({inventoryItems.length} items)
-          </h4>
-          <div className="space-y-2 max-h-32 overflow-auto">
-            {inventoryItems.map(([itemId, quantity]) => {
-              const item = items[itemId];
-              const effectiveQuantity = getEffectiveInventoryQuantity(itemId);
-              
-              return (
-                <div
-                  key={itemId}
-                  className="flex items-center justify-between bg-white px-3 py-2 rounded border border-slate-200"
-                >
-                  <div>
-                    <span className="font-medium text-slate-800">
-                      {item?.name || `Item ${itemId}`}
-                    </span>
-                    {effectiveQuantity > quantity && (
-                      <span className="text-xs text-purple-600 ml-2">
-                        (+{effectiveQuantity - quantity} effective)
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-slate-600 font-medium">{quantity.toLocaleString()}</span>
-                    <button
-                      onClick={() => removeInventoryItem(itemId)}
-                      className="text-red-600 hover:text-red-800 font-bold text-xs px-1 py-1 rounded hover:bg-red-100 transition-colors"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Item List */}
+      {/* Inventory List */}
       <div>
-        <h4 className="font-bold text-slate-800 mb-3">
-          {showOnlyRequired ? '🎯 All Required Materials (Base + Intermediate)' : '📦 All Items'} 
-          ({filteredItems.length})
-        </h4>
-        
-        {filteredItems.length === 0 ? (
-          <div className="text-center py-8">
-            <div className="bg-slate-50 rounded-lg p-6 border-2 border-dashed border-slate-300">
-              <div className="text-lg font-medium text-slate-600 mb-2">No items found</div>
-              <div className="text-sm text-slate-500">
-                {showOnlyRequired 
-                  ? "Add items to your build list to see all required materials (base + intermediate)"
-                  : "Try adjusting your search term"
-                }
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-2 max-h-96 overflow-auto">
-            {filteredItems.map(([itemId, item]) => {
-              const currentQuantity = inventory[itemId] || 0;
-              const isRequired = requiredItemIds.has(itemId);
-              const requiredMaterial = allPossibleMaterials.find(m => m.itemId === itemId);
-              
-              return (
-                <div
-                  key={itemId}
-                  className={`p-3 rounded-lg border transition-all ${
-                    isRequired 
-                      ? 'bg-blue-50 border-blue-200' 
-                      : 'bg-white border-slate-200'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <div>
-                      <span className="font-medium text-slate-800">{item.name}</span>
-                      {isRequired && requiredMaterial && (
-                        <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                          Need {requiredMaterial.needed.toLocaleString()}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 text-xs">
-                      <span className="bg-slate-100 px-2 py-1 rounded text-slate-600 font-medium">
-                        T{item.tier >= 0 ? item.tier : 'B'}
-                      </span>
-                      <span className={`px-2 py-1 rounded font-semibold ${RARITY_COLORS[item.rarity as keyof typeof RARITY_COLORS]} bg-slate-100`}>
-                        {RARITY_NAMES[item.rarity as keyof typeof RARITY_NAMES]}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-slate-600 font-medium">Quantity:</span>
-                    <input
-                      type="number"
-                      value={currentQuantity}
-                      onChange={(e) => handleQuantityChange(itemId, e.target.value)}
-                      className="flex-1 px-3 py-2 bg-white border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      min="0"
-                      placeholder="0"
-                    />
-                  </div>
+        <h3 className="font-bold text-lg mb-2 text-white">Your Items ({Object.keys(inventory).length})</h3>
+        <div className="space-y-2">
+          {Object.keys(inventory).length > 0 ? (
+            Object.entries(inventory).map(([id, quantity]) => (
+              <div key={id} className="flex items-center justify-between p-3 bg-gray-700 rounded-lg">
+                <span className="text-white">{items[id]?.name || 'Unknown Item'}</span>
+                <div className="flex items-center space-x-2">
+                  <span className="text-gray-300">x{quantity}</span>
+                  <button onClick={() => removeInventoryItem(id)} className="text-red-400 hover:text-red-300">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clipRule="evenodd" />
+                    </svg>
+                  </button>
                 </div>
-              );
-            })}
-          </div>
-        )}
+              </div>
+            ))
+          ) : (
+            <p className="text-gray-400">Your inventory is empty.</p>
+          )}
+        </div>
       </div>
     </div>
   );

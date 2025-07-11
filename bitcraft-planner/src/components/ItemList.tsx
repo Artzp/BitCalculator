@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useItemsStore } from '../state/useItemsStore';
 import { RARITY_COLORS, RARITY_NAMES } from '../utils/constants';
+import { Item } from '../types/Item';
+import { ChevronUpIcon, ChevronDownIcon } from '@heroicons/react/24/solid';
 
 interface ItemListProps {
   showAddToBuilds?: boolean;
@@ -8,14 +10,10 @@ interface ItemListProps {
 
 const ItemList: React.FC<ItemListProps> = ({ showAddToBuilds = false }) => {
   const {
-    searchTerm,
-    tierFilter,
-    rarityFilter,
-    recipeTypeFilter,
-    setSearchTerm,
-    setTierFilter,
-    setRarityFilter,
-    setRecipeTypeFilter,
+    filters,
+    sort,
+    setFilter,
+    setSort,
     getFilteredItems,
     addToBuildList,
     items,
@@ -23,13 +21,12 @@ const ItemList: React.FC<ItemListProps> = ({ showAddToBuilds = false }) => {
 
   const [addQuantities, setAddQuantities] = useState<Record<string, number>>({});
   const [showAll, setShowAll] = useState(false);
-  const [itemsToShow, setItemsToShow] = useState(15); // Start with fewer items for better mobile experience
+  const [itemsToShow, setItemsToShow] = useState(20);
 
-  // Reset pagination when filters change
   useEffect(() => {
     setShowAll(false);
-    setItemsToShow(15);
-  }, [searchTerm, tierFilter, rarityFilter, recipeTypeFilter]);
+    setItemsToShow(20);
+  }, [filters, sort]);
 
   const filteredItems = getFilteredItems();
   const displayedItems = showAll ? filteredItems : filteredItems.slice(0, itemsToShow);
@@ -38,10 +35,8 @@ const ItemList: React.FC<ItemListProps> = ({ showAddToBuilds = false }) => {
   const handleAddToBuild = (itemId: string) => {
     const quantity = addQuantities[itemId] || 1;
     const item = items[itemId];
-    
-    if (item && item.recipes && item.recipes.length > 0) {
-      addToBuildList(itemId, quantity, 0); // Default to first recipe
-      // Reset quantity after adding
+    if (item?.recipes?.length) {
+      addToBuildList(itemId, quantity, 0);
       setAddQuantities(prev => ({ ...prev, [itemId]: 1 }));
     }
   };
@@ -50,249 +45,179 @@ const ItemList: React.FC<ItemListProps> = ({ showAddToBuilds = false }) => {
     setAddQuantities(prev => ({ ...prev, [itemId]: Math.max(1, quantity) }));
   };
 
-  const handleShowMore = () => {
-    setItemsToShow(prev => prev + 15);
-  };
-
-  const handleShowAll = () => {
-    setShowAll(true);
-  };
-
-  const handleResetView = () => {
-    setShowAll(false);
-    setItemsToShow(15);
-  };
-
   const clearAllFilters = () => {
-    setSearchTerm('');
-    setTierFilter(null);
-    setRarityFilter(null);
-    setRecipeTypeFilter('craftable');
+    setFilter({
+      searchTerm: '',
+      tier: null,
+      rarity: null,
+      recipeType: 'craftable',
+      profession: null,
+    });
+    setSort({ by: 'tier', direction: 'asc' });
   };
 
-  const uniqueTiers = Array.from(new Set(
-    Object.values(useItemsStore.getState().items).map(item => item.tier)
-  )).sort((a, b) => a - b);
+  const uniqueTiers = Array.from(new Set(Object.values(items).map(item => item.tier))).sort((a, b) => a - b);
+  const uniqueRarities = Array.from(new Set(Object.values(items).map(item => item.rarity))).sort((a, b) => a - b);
 
-  const uniqueRarities = Array.from(new Set(
-    Object.values(useItemsStore.getState().items).map(item => item.rarity)
-  )).sort((a, b) => a - b);
+  const handleSort = (by: 'name' | 'tier' | 'rarity') => {
+    setSort({ by: by, direction: 'asc' });
+  };
 
   return (
-    <div className="flex flex-col h-full space-y-3">
-      {/* Search - More Prominent */}
-      <div className="flex-shrink-0 space-y-2">
-        <div className="relative">
+    <div className="bg-gray-800 rounded-lg shadow-lg flex flex-col h-full text-white">
+      {/* Header */}
+      <div className="p-4 border-b border-gray-700">
+        <h2 className="text-lg font-bold">Item Catalog</h2>
+        <p className="text-sm text-gray-400">Browse and select items to build</p>
+      </div>
+
+      {/* Filters */}
+      <div className="p-4 border-b border-gray-700">
+        <div className="relative mb-4">
           <input
             type="text"
-            placeholder="🔍 Search items..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-3 py-2 bg-white border-2 border-slate-300 rounded-lg focus:border-blue-500 focus:outline-none transition-colors text-sm"
+            placeholder="Search by name..."
+            value={filters.searchTerm}
+            onChange={(e) => setFilter({ searchTerm: e.target.value })}
+            className="w-full p-2 pl-8 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
-          {searchTerm && (
-            <button
-              onClick={() => setSearchTerm('')}
-              className="absolute right-2 top-2 text-slate-400 hover:text-slate-600"
-            >
-              ✕
-            </button>
-          )}
+          <svg className="w-4 h-4 absolute left-2.5 top-3.5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+          </svg>
         </div>
-        
-        {/* Filters - Collapsible */}
-        <details className="group">
-          <summary className="cursor-pointer text-xs text-slate-600 hover:text-slate-800 list-none">
-            <span className="flex items-center gap-1">
-              <span className="transition-transform group-open:rotate-90">▶</span>
-              Filters {(tierFilter || rarityFilter || recipeTypeFilter !== 'craftable') && '🎯'}
-            </span>
-          </summary>
-          <div className="space-y-2 mt-2">
-            <div className="grid grid-cols-3 gap-2">
-              {/* Tier Filter */}
-              <select
-                value={tierFilter ?? ''}
-                onChange={(e) => setTierFilter(e.target.value ? parseInt(e.target.value) : null)}
-                className="px-2 py-1 bg-slate-50 text-slate-800 text-xs rounded border border-slate-300 focus:border-blue-500 focus:outline-none transition-colors"
-              >
-                <option value="">All Tiers</option>
-                {uniqueTiers.map(tier => (
-                  <option key={tier} value={tier}>
-                    T{tier >= 0 ? tier : 'B'}
-                  </option>
-                ))}
-              </select>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="flex items-center space-x-2">
+            <label htmlFor="sort-by" className="text-sm font-medium text-gray-400">Sort By:</label>
+            <select
+              id="sort-by"
+              value={sort.by}
+              onChange={(e) => handleSort(e.target.value as 'name' | 'tier' | 'rarity')}
+              className="flex-grow p-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="tier">Tier</option>
+              <option value="name">Name</option>
+              <option value="rarity">Rarity</option>
+            </select>
+            <button onClick={() => setSort({ direction: sort.direction === 'asc' ? 'desc' : 'asc' })} className="p-2 bg-gray-700 border border-gray-600 rounded-lg">
+              {sort.direction === 'asc' ? <ChevronUpIcon className="h-5 w-5" /> : <ChevronDownIcon className="h-5 w-5" />}
+            </button>
+          </div>
+          <div className="flex items-center space-x-2">
+            <label htmlFor="show" className="text-sm font-medium text-gray-400">Show:</label>
+            <select
+              id="show"
+              value={filters.recipeType || 'all'}
+              onChange={(e) => setFilter({ recipeType: e.target.value as any })}
+              className="flex-grow p-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">All Items</option>
+              <option value="craftable">Craftable</option>
+              <option value="base">Base Resources</option>
+            </select>
+          </div>
+          <select
+            value={filters.tier === null ? 'all' : filters.tier}
+            onChange={(e) => setFilter({ tier: e.target.value === 'all' ? null : Number(e.target.value) })}
+            className="p-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">All Tiers</option>
+            {[...Array(8).keys()].map(i => <option key={i+1} value={i+1}>Tier {i+1}</option>)}
+          </select>
+          <select
+            value={filters.rarity === null ? 'all' : filters.rarity}
+            onChange={(e) => setFilter({ rarity: e.target.value === 'all' ? null : Number(e.target.value) })}
+            className="p-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">All Rarities</option>
+            <option value="0">Common</option>
+            <option value="1">Uncommon</option>
+            <option value="2">Rare</option>
+            <option value="3">Epic</option>
+            <option value="4">Legendary</option>
+          </select>
+        </div>
+        <div className="text-right mt-2">
+          <button onClick={() => { setFilter({ searchTerm: '', tier: null, rarity: null, recipeType: 'craftable' }); setSort({ by: 'tier', direction: 'asc' }); }} className="text-sm text-blue-400 hover:text-blue-300">
+            Reset Filters
+          </button>
+        </div>
+      </div>
 
-              {/* Rarity Filter */}
-              <select
-                value={rarityFilter ?? ''}
-                onChange={(e) => setRarityFilter(e.target.value ? parseInt(e.target.value) : null)}
-                className="px-2 py-1 bg-slate-50 text-slate-800 text-xs rounded border border-slate-300 focus:border-blue-500 focus:outline-none transition-colors"
-              >
-                <option value="">All Rarities</option>
-                {uniqueRarities.map(rarity => (
-                  <option key={rarity} value={rarity}>
-                    {RARITY_NAMES[rarity as keyof typeof RARITY_NAMES]}
-                  </option>
-                ))}
-              </select>
-
-              {/* Recipe Type Filter */}
-              <select
-                value={recipeTypeFilter ?? ''}
-                onChange={(e) => setRecipeTypeFilter(e.target.value as 'all' | 'craftable' | 'base' | null || null)}
-                className="px-2 py-1 bg-slate-50 text-slate-800 text-xs rounded border border-slate-300 focus:border-blue-500 focus:outline-none transition-colors"
-              >
-                <option value="">All Items</option>
-                <option value="craftable">Craftable</option>
-                <option value="base">Base</option>
-              </select>
+      {/* Item List */}
+      <div className="flex-1 overflow-y-auto p-2">
+        {filteredItems.map(([id, item]) => (
+          <div key={id} className="flex items-center p-3 hover:bg-gray-700 rounded-lg">
+            <div className="flex-grow">
+              <p className="font-semibold">{item.name}</p>
+              <p className="text-sm text-gray-400">T-{item.tier} {RARITY_NAMES[item.rarity as keyof typeof RARITY_NAMES]}</p>
             </div>
-            
-            {/* Clear Filters Button */}
-            {(searchTerm || tierFilter || rarityFilter || recipeTypeFilter !== 'craftable') && (
-              <button
-                onClick={clearAllFilters}
-                className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded text-xs font-medium transition-colors"
-              >
-                Clear All Filters
-              </button>
+            {showAddToBuilds && (
+              <div className="flex items-center space-x-2">
+                <input
+                  type="number"
+                  min="1"
+                  value={addQuantities[id] || 1}
+                  onChange={(e) => updateQuantity(id, parseInt(e.target.value) || 1)}
+                  className="w-20 p-2 text-center bg-gray-700 border border-gray-600 rounded-lg"
+                />
+                <button
+                  onClick={() => addToBuildList(id, addQuantities[id] || 1)}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg"
+                >
+                  Add
+                </button>
+              </div>
             )}
           </div>
-        </details>
+        ))}
       </div>
 
-      {/* Results Summary */}
-      <div className="flex-shrink-0 text-xs text-slate-600 bg-slate-100 rounded px-2 py-1">
-        {filteredItems.length > 0 ? (
-          <>
-            Showing {displayedItems.length} of {filteredItems.length} items
-            {searchTerm && ` for "${searchTerm}"`}
-            {recipeTypeFilter === 'craftable' && !searchTerm && !tierFilter && !rarityFilter && (
-              <span className="text-blue-600"> • Craftable items only</span>
-            )}
-          </>
-        ) : (
-          <>
-            {searchTerm ? `No items found for "${searchTerm}"` : 'No items found'}
-            {recipeTypeFilter === 'craftable' && (
-              <span className="text-blue-600"> • Try "All Items" filter</span>
-            )}
-          </>
-        )}
+      {/* Footer */}
+      <div className="p-3 border-t border-gray-700 text-sm text-gray-400">
+        Showing {filteredItems.length} of {Object.keys(items).length} items
       </div>
+    </div>
+  );
+};
 
-      {/* Items List - Paginated */}
-      <div className="flex-1 min-h-0">
-        <div className="h-full overflow-y-auto space-y-2 pr-2">
-          {displayedItems.length > 0 ? (
-            displayedItems.map(([id, item]) => {
-              const canCraft = item.recipes && item.recipes.length > 0;
-              const quantity = addQuantities[id] || 1;
-              
-              return (
-                <div
-                  key={id}
-                  className="p-2 bg-slate-50 rounded-lg transition-all duration-200 border border-slate-200 hover:border-blue-400 hover:shadow-sm"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-semibold text-slate-800 text-sm truncate">{item.name}</h3>
-                        <div className="flex items-center gap-1 flex-shrink-0">
-                          <span className="text-xs font-medium text-slate-600 bg-slate-200 px-1.5 py-0.5 rounded">
-                            T{item.tier >= 0 ? item.tier : 'B'}
-                          </span>
-                          <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${RARITY_COLORS[item.rarity as keyof typeof RARITY_COLORS] || 'text-gray-400'} bg-slate-200`}>
-                            {(RARITY_NAMES[item.rarity as keyof typeof RARITY_NAMES] || 'Unknown').charAt(0)}
-                          </span>
-                          {!canCraft && (
-                            <span className="text-xs font-medium text-orange-600 bg-orange-100 px-1.5 py-0.5 rounded">
-                              Base
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex-shrink-0 ml-2">
-                      {showAddToBuilds ? (
-                        <div className="flex items-center gap-1">
-                          {canCraft && (
-                            <>
-                              <input
-                                type="number"
-                                min="1"
-                                value={quantity}
-                                onChange={(e) => updateQuantity(id, parseInt(e.target.value) || 1)}
-                                className="w-12 px-1 py-0.5 text-xs bg-white border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                onClick={(e) => e.stopPropagation()}
-                              />
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleAddToBuild(id);
-                                }}
-                                className="bg-blue-600 hover:bg-blue-700 text-white px-2 py-0.5 rounded text-xs font-medium transition-colors"
-                              >
-                                Add
-                              </button>
-                            </>
-                          )}
-                          {!canCraft && (
-                            <div className="text-xs font-medium text-slate-500 bg-slate-200 px-2 py-0.5 rounded">
-                              N/A
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="text-xs font-medium text-slate-600 bg-slate-200 px-2 py-0.5 rounded">
-                          {item.recipes.length > 0 ? `${item.recipes.length}R` : 'Base'}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })
+const ItemRow = ({ id, item, addQuantities, updateQuantity, handleAddToBuild, showAddToBuilds }: { id: string, item: Item, addQuantities: Record<string, number>, updateQuantity: Function, handleAddToBuild: Function, showAddToBuilds?: boolean }) => {
+  const canCraft = item.recipes && item.recipes.length > 0;
+  const quantity = addQuantities[id] || 1;
+
+  return (
+    <div className="p-3 bg-slate-50 rounded-lg flex items-center justify-between hover:bg-slate-100 border border-transparent hover:border-slate-200 transition-all">
+      <div className="flex-1 min-w-0">
+        <p className="font-semibold text-slate-800 truncate">{item.name}</p>
+        <div className="flex items-center gap-2 text-xs text-slate-500">
+          <span>T{item.tier}</span>
+          <span style={{ color: RARITY_COLORS[item.rarity as keyof typeof RARITY_COLORS] || 'inherit' }}>
+            {RARITY_NAMES[item.rarity as keyof typeof RARITY_NAMES] || 'Unknown'}
+          </span>
+          {!canCraft && <span className="text-orange-500">Non-Craftable</span>}
+        </div>
+      </div>
+      {showAddToBuilds && (
+        <div className="flex-shrink-0 ml-4 flex items-center gap-2">
+          {canCraft ? (
+            <>
+              <input
+                type="number"
+                min="1"
+                value={quantity}
+                onChange={(e) => updateQuantity(id, parseInt(e.target.value) || 1)}
+                className="w-16 px-2 py-1 text-center bg-white border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                onClick={(e) => e.stopPropagation()}
+              />
+              <button
+                onClick={() => handleAddToBuild(id)}
+                className="px-4 py-1 bg-blue-600 text-white text-sm font-semibold rounded-md hover:bg-blue-700 transition-colors"
+              >
+                Add
+              </button>
+            </>
           ) : (
-            <div className="flex items-center justify-center h-32">
-              <div className="bg-slate-100 rounded-lg p-4 border border-slate-200">
-                <div className="text-sm font-medium text-slate-600">No items found</div>
-                <div className="text-xs text-slate-500 mt-1">Try adjusting your search or filters</div>
-              </div>
-            </div>
+            <span className="text-xs text-slate-400">Cannot be crafted</span>
           )}
-        </div>
-      </div>
-      
-      {/* Load More Controls */}
-      {filteredItems.length > 0 && !showAll && hasMore && (
-        <div className="flex-shrink-0 space-y-2">
-          <button
-            onClick={handleShowMore}
-            className="w-full bg-blue-100 hover:bg-blue-200 text-blue-800 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
-          >
-            Show More ({filteredItems.length - itemsToShow} remaining)
-          </button>
-          <button
-            onClick={handleShowAll}
-            className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1 rounded text-xs font-medium transition-colors"
-          >
-            Show All {filteredItems.length} Items
-          </button>
-        </div>
-      )}
-      
-      {/* Reset View Button */}
-      {showAll && (
-        <div className="flex-shrink-0">
-          <button
-            onClick={handleResetView}
-            className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1 rounded text-xs font-medium transition-colors"
-          >
-            Back to Paginated View
-          </button>
         </div>
       )}
     </div>
