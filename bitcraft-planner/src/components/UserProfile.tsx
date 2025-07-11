@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { SettlementV2Service } from '../services/settlementV2Service';
 import { isValidUsername } from '../utils/userUtils';
+import { Professions } from './Professions';
 
 interface UserProfileProps {
   isOpen: boolean;
@@ -13,6 +14,10 @@ export const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onUse
   const { user } = useAuth();
   const [username, setUsername] = useState<string>('');
   const [originalUsername, setOriginalUsername] = useState<string>('');
+  const [selectedProfessions, setSelectedProfessions] = useState<string[]>([]);
+  const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
+  const [originalSelectedProfessions, setOriginalSelectedProfessions] = useState<string[]>([]);
+  const [originalSelectedSkills, setOriginalSelectedSkills] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string>('');
@@ -41,6 +46,14 @@ export const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onUse
       const currentUsername = profile?.username || profile?.displayName || '';
       setUsername(currentUsername);
       setOriginalUsername(currentUsername);
+
+      const currentProfessions = profile?.professions || [];
+      setSelectedProfessions(currentProfessions);
+      setOriginalSelectedProfessions(currentProfessions);
+
+      const currentSkills = profile?.skills || [];
+      setSelectedSkills(currentSkills);
+      setOriginalSelectedSkills(currentSkills);
       
     } catch (error) {
       console.error('Error loading user profile:', error);
@@ -66,11 +79,15 @@ export const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onUse
       setSuccess('');
       
       await settlementService.updateUser(user.uid, {
-        username: username.trim()
+        username: username.trim(),
+        professions: selectedProfessions,
+        skills: selectedSkills,
       });
       
       setOriginalUsername(username.trim());
-      setSuccess('Username updated successfully!');
+      setOriginalSelectedProfessions(selectedProfessions);
+      setOriginalSelectedSkills(selectedSkills);
+      setSuccess('Profile updated successfully!');
       
       // Notify parent component about the update
       if (onUserProfileUpdated) {
@@ -82,7 +99,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onUse
       
     } catch (error) {
       console.error('Error updating username:', error);
-      setError('Failed to update username. Please try again.');
+      setError('Failed to update profile. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -90,12 +107,32 @@ export const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onUse
 
   const handleCancel = () => {
     setUsername(originalUsername);
+    setSelectedProfessions(originalSelectedProfessions);
+    setSelectedSkills(originalSelectedSkills);
     setError('');
     setSuccess('');
     onClose();
   };
 
-  const hasChanges = username.trim() !== originalUsername;
+  const handleProfessionChange = (profession: string) => {
+    setSelectedProfessions(prev => 
+      prev.includes(profession) 
+        ? prev.filter(p => p !== profession)
+        : [...prev, profession]
+    );
+  };
+
+  const handleSkillChange = (skill: string) => {
+    setSelectedSkills(prev =>
+      prev.includes(skill)
+        ? prev.filter(s => s !== skill)
+        : [...prev, skill]
+    );
+  };
+
+  const hasChanges = username.trim() !== originalUsername ||
+    JSON.stringify(selectedProfessions.sort()) !== JSON.stringify(originalSelectedProfessions.sort()) ||
+    JSON.stringify(selectedSkills.sort()) !== JSON.stringify(originalSelectedSkills.sort());
 
   if (!isOpen) return null;
 
@@ -169,6 +206,15 @@ export const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onUse
                     {username.length}/20 characters
                   </span>
                 </div>
+              </div>
+
+              <div className="border-t border-gray-200 pt-6">
+                <Professions
+                  selectedProfessions={selectedProfessions}
+                  selectedSkills={selectedSkills}
+                  onProfessionChange={handleProfessionChange}
+                  onSkillChange={handleSkillChange}
+                />
               </div>
 
               {/* Error/Success Messages */}

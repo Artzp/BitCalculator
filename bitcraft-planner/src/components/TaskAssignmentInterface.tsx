@@ -6,6 +6,11 @@ import { getMemberDisplayName } from '../utils/userUtils';
 import { SettlementV2, ProjectV2, TaskV2 } from '../services/settlementV2Service';
 import { SettlementMember } from '../types/NormalizedDatabase';
 
+const professions = [
+  "Forestry", "Mining", "Foraging", "Hunting", "Fishing", "Farming",
+  "Carpentry", "Masonry", "Smithing", "Leatherworking", "Tailoring", "Scholar"
+];
+
 interface TaskAssignmentInterfaceProps {
   onClose: () => void;
   currentSettlement?: SettlementV2 | null;
@@ -63,6 +68,7 @@ export const TaskAssignmentInterface: React.FC<TaskAssignmentInterfaceProps> = (
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<string>('unassigned');
   const [loading, setLoading] = useState(false);
+  const [selectedProfession, setSelectedProfession] = useState<string>('');
   
   // Advanced assignment features
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
@@ -987,6 +993,30 @@ export const TaskAssignmentInterface: React.FC<TaskAssignmentInterfaceProps> = (
                       );
                     })}
                   </div>
+                </div>
+
+                {/* Assign to all with Profession */}
+                <div className="mb-6">
+                  <h4 className="font-medium mb-3">Assign to all with Profession</h4>
+                  <select
+                    value={selectedProfession}
+                    onChange={(e) => {
+                      const profession = e.target.value;
+                      setSelectedProfession(profession);
+                      if (profession) {
+                        const playersWithProfession = settlementMembers
+                          .filter(member => member.user?.professions?.includes(profession))
+                          .map(member => member.user.id);
+                        setSelectedPlayers(playersWithProfession);
+                      } else {
+                        setSelectedPlayers([]);
+                      }
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select a Profession</option>
+                    {professions.map(p => <option key={p} value={p}>{p}</option>)}
+                  </select>
                 </div>
 
                 {/* Assignment Options */}

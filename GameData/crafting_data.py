@@ -193,7 +193,7 @@ for item in items:
 	list_id = item['item_list_id']
 	if list_id == 0 or item['tier'] < 0:
 		continue
-	del crafting_data[id]
+	# del crafting_data[id]
 
 	for item_list in item_lists:
 		if item_list['id'] != list_id:

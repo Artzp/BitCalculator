@@ -59,6 +59,10 @@ if %errorlevel% neq 0 (
 )
 
 echo.
+echo Deploying data...
+powershell -File ./deploy-data.ps1
+
+echo.
 echo ========================================
 echo   SUCCESS! App deployed to Firebase!
 echo ========================================

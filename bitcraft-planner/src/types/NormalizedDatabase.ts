@@ -27,6 +27,8 @@ export interface User {
   displayName?: string;
   photoURL?: string;
   username?: string; // Game username/nickname that other players see
+  professions?: string[];
+  skills?: string[];
   emailVerified: boolean;
   providerId: string;
   createdAt: Date;

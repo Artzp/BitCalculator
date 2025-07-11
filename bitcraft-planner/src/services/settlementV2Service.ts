@@ -24,13 +24,15 @@ import { SettlementCollaboration, SettlementCollaboratorRole, SettlementCollabor
 // New database structure interfaces
 export interface UserV2 {
   id: string;
-  email: string;
-  displayName: string;
+  email: string | null;
+  displayName: string | null;
   photoURL?: string;
   username?: string; // Game username/nickname that other players see
+  professions?: string[];
+  skills?: string[];
   customDisplayName?: string; // Custom display name for privacy
-  createdAt: Timestamp;
-  lastSignIn: Timestamp;
+  createdAt: any; // Firestore Timestamp
+  lastSignIn: any; // Firestore Timestamp
   defaultSettlementId?: string;
   preferences: {
     theme?: 'light' | 'dark';
@@ -1130,15 +1132,18 @@ export class SettlementV2Service {
   }
 
   private convertUserV2ToUser(userV2: UserV2): User {
-    // Safe access to preferences object
+    // This is a temporary compatibility layer.
+    // Eventually, the app should use UserV2 directly.
     const safePreferences = userV2.preferences || {};
-    
+
     return {
       id: userV2.id,
-      email: userV2.email,
-      displayName: userV2.displayName,
+      email: userV2.email || '',
+      displayName: userV2.displayName || '',
       photoURL: userV2.photoURL,
       username: userV2.username, // Include the username field
+      professions: userV2.professions || [], // Include professions
+      skills: userV2.skills || [], // Include skills
       emailVerified: true, // Default value
       providerId: 'firebase', // Default value
       createdAt: this.safeToDate(userV2.createdAt),
