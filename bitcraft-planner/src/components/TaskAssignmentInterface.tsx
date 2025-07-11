@@ -69,6 +69,7 @@ export const TaskAssignmentInterface: React.FC<TaskAssignmentInterfaceProps> = (
   const [filterStatus, setFilterStatus] = useState<string>('unassigned');
   const [loading, setLoading] = useState(false);
   const [selectedProfession, setSelectedProfession] = useState<string>('');
+  const [selectedProject, setSelectedProject] = useState<string>('');
   
   // Advanced assignment features
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
@@ -296,7 +297,9 @@ export const TaskAssignmentInterface: React.FC<TaskAssignmentInterfaceProps> = (
                          (filterStatus === 'assigned' && task.assignedTo) ||
                          task.status === filterStatus;
     
-    return matchesSearch && matchesStatus;
+    const matchesProject = !selectedProject || task.projectId === selectedProject;
+    
+    return matchesSearch && matchesStatus && matchesProject;
   });
 
   // Use real settlement members
@@ -554,6 +557,19 @@ export const TaskAssignmentInterface: React.FC<TaskAssignmentInterfaceProps> = (
                     <option value="pending">Pending</option>
                     <option value="in_progress">In Progress</option>
                     <option value="completed">Completed</option>
+                  </select>
+
+                  <select
+                    value={selectedProject}
+                    onChange={(e) => setSelectedProject(e.target.value)}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">All Projects</option>
+                    {projects.map((project) => (
+                      <option key={project.id} value={project.id}>
+                        {project.name}
+                      </option>
+                    ))}
                   </select>
                   
                   {showAdvancedOptions && (
