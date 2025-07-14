@@ -52,14 +52,15 @@ export class RecipeResolver {
       .sort((a, b) => a.tier - b.tier || a.itemName.localeCompare(b.itemName));
 
     return {
-      item: targetItem.name,
       itemId: targetItemId,
       itemName: targetItem.name,
-      needed: targetQuantity,
+      quantity: targetQuantity,
       available: this.getInventoryQuantity(targetItemId),
+      needed: targetQuantity,
       craft: result.craft,
       status: result.status,
-      ingredients: result.ingredients,
+      children: [],
+      recipeIndex: 0,
       totalMaterialsFlat
     };
   }
@@ -227,7 +228,8 @@ export class RecipeResolver {
         craft,
         status,
         tier: item?.tier || 0,
-        rarity: item?.rarity || 1
+        rarity: item?.rarity || 1,
+        isBaseItem: !item?.recipes || item.recipes.length === 0
       });
     }
   }

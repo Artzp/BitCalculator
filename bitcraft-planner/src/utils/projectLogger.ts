@@ -21,7 +21,18 @@ class ProjectLogger {
     try {
       const { useSettlementStore } = require('../state/useSettlementStore');
       const settlement = useSettlementStore.getState().settlement;
-      return settlement?.projects?.map((p: any) => ({ id: p.id, name: p.name })) || [];
+      
+      // Handle both array and object formats for projects
+      const projects = settlement?.projects;
+      let projectsArray: any[] = [];
+      
+      if (Array.isArray(projects)) {
+        projectsArray = projects;
+      } else if (projects && typeof projects === 'object') {
+        projectsArray = Object.values(projects);
+      }
+      
+      return projectsArray.map((p: any) => ({ id: p.id, name: p.name })) || [];
     } catch {
       return [];
     }
@@ -148,13 +159,23 @@ class ProjectLogger {
   }
 
   logDataSave(location: string, operation: string, settlementData: any) {
+    // Handle both array and object formats for projects
+    const projects = settlementData?.projects;
+    let projectsArray: any[] = [];
+    
+    if (Array.isArray(projects)) {
+      projectsArray = projects;
+    } else if (projects && typeof projects === 'object') {
+      projectsArray = Object.values(projects);
+    }
+    
     this.addLog({
       type: 'SAVE',
       location,
       operation,
       details: {
-        settlementProjects: settlementData?.projects?.length || 0,
-        settlementProjectNames: settlementData?.projects?.map((p: any) => p.name) || [],
+        settlementProjects: projectsArray.length || 0,
+        settlementProjectNames: projectsArray.map((p: any) => p.name || p.id || 'Unknown') || [],
         hasSettlement: !!settlementData,
         settlementKeys: settlementData ? Object.keys(settlementData) : []
       }
@@ -162,6 +183,16 @@ class ProjectLogger {
   }
 
   logDataLoad(location: string, operation: string, loadedData: any) {
+    // Handle both array and object formats for projects
+    const projects = loadedData?.settlement?.projects;
+    let projectsArray: any[] = [];
+    
+    if (Array.isArray(projects)) {
+      projectsArray = projects;
+    } else if (projects && typeof projects === 'object') {
+      projectsArray = Object.values(projects);
+    }
+    
     this.addLog({
       type: 'LOAD',
       location,
@@ -169,8 +200,8 @@ class ProjectLogger {
       details: {
         hasData: !!loadedData,
         hasSettlement: !!loadedData?.settlement,
-        loadedProjects: loadedData?.settlement?.projects?.length || 0,
-        loadedProjectNames: loadedData?.settlement?.projects?.map((p: any) => p.name) || [],
+        loadedProjects: projectsArray.length || 0,
+        loadedProjectNames: projectsArray.map((p: any) => p.name || p.id || 'Unknown') || [],
         dataKeys: loadedData ? Object.keys(loadedData) : [],
         settlementKeys: loadedData?.settlement ? Object.keys(loadedData.settlement) : []
       }
@@ -178,14 +209,24 @@ class ProjectLogger {
   }
 
   logStateChange(location: string, operation: string, newState: any) {
+    // Handle both array and object formats for projects
+    const projects = newState?.projects;
+    let projectsArray: any[] = [];
+    
+    if (Array.isArray(projects)) {
+      projectsArray = projects;
+    } else if (projects && typeof projects === 'object') {
+      projectsArray = Object.values(projects);
+    }
+    
     this.addLog({
       type: 'STATE_CHANGE',
       location,
       operation,
       details: {
         hasSettlement: !!newState,
-        stateProjects: newState?.projects?.length || 0,
-        stateProjectNames: newState?.projects?.map((p: any) => p.name) || [],
+        stateProjects: projectsArray.length || 0,
+        stateProjectNames: projectsArray.map((p: any) => p.name || p.id || 'Unknown') || [],
         stateKeys: newState ? Object.keys(newState) : []
       }
     });

@@ -1,0 +1,997 @@
+Directory Structure:
+./
+    collect_files.py
+    combined.txt
+    Item.ts
+    NormalizedDatabase.ts
+    RecipeResolver.ts
+    Settlement.ts
+
+---
+
+File: collect_files.py
+import os
+import sys
+
+# List of directories to ignore
+IGNORE_DIRS = {'.git', 'node_modules', '__pycache__', 'venv', '.venv', 'env', '.env'}
+
+# List of text file extensions to include (add more if needed)
+TEXT_EXTENSIONS = {
+    '.py', '.js', '.ts', '.html', '.css', '.json', '.md', '.txt', '.yaml', '.yml',
+    '.java', '.cpp', '.c', '.h', '.sh', '.bat', '.go', '.rb', '.php', '.sql', '.tsx'
+}  # Added .tsx since your files are React components
+
+def is_text_file(filename):
+    return os.path.splitext(filename)[1].lower() in TEXT_EXTENSIONS
+
+def collect_files(root_dir='.', output_file='combined.txt'):
+    with open(output_file, 'w', encoding='utf-8') as out:
+        # Write a header with directory structure overview
+        out.write("Directory Structure:\n")
+        for subdir, dirs, files in os.walk(root_dir):
+            dirs[:] = [d for d in dirs if d not in IGNORE_DIRS]  # Skip ignored dirs
+            level = subdir.replace(root_dir, '').count(os.sep)
+            indent = ' ' * 4 * level
+            out.write(f"{indent}{os.path.basename(subdir)}/\n")
+            subindent = ' ' * 4 * (level + 1)
+            for f in files:
+                out.write(f"{subindent}{f}\n")
+        out.write("\n---\n\n")
+
+        # Now collect file contents
+        for subdir, dirs, files in os.walk(root_dir):
+            dirs[:] = [d for d in dirs if d not in IGNORE_DIRS]  # Skip ignored dirs
+            for file in files:
+                if not is_text_file(file):
+                    continue  # Skip non-text files
+                file_path = os.path.join(subdir, file)
+                rel_path = os.path.relpath(file_path, root_dir)
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        content = f.read()
+                    out.write(f"File: {rel_path}\n")
+                    out.write(content)
+                    out.write("\n\n---\n\n")
+                except UnicodeDecodeError:
+                    out.write(f"Skipping {rel_path}: Not a text file or encoding issue.\n\n---\n\n")
+                except Exception as e:
+                    out.write(f"Error reading {rel_path}: {e}\n\n---\n\n")
+
+    print(f"Done! Output saved to {output_file}")
+
+if __name__ == "__main__":
+    root_dir = sys.argv[1] if len(sys.argv) > 1 else '.'
+    output_file = sys.argv[2] if len(sys.argv) > 2 else 'combined.txt'
+    collect_files(root_dir, output_file)
+
+---
+
+File: combined.txt
+
+
+---
+
+File: Item.ts
+export interface Ingredient {
+  id: number;
+  quantity: number;
+}
+
+export interface SkillRequirement {
+  skill_name: string;
+  skill_level: number;
+  skill_id: number;
+}
+
+export interface Recipe {
+  level_requirements: number;
+  consumed_items: Ingredient[];
+  output_quantity: number;
+  possibilities: Record<number, number>;
+  building_requirement: string | null;
+  skill_requirement: SkillRequirement | null;
+}
+
+export interface Item {
+  name: string;
+  tier: number;
+  rarity: number;
+  icon: string;
+  recipes: Recipe[];
+  extraction_skill: number;
+}
+
+export interface ItemsData {
+  [id: string]: Item;
+} 
+
+---
+
+File: NormalizedDatabase.ts
+// ============================================================================
+// NORMALIZED DATABASE SCHEMA TYPES
+// ============================================================================
+// This file defines the new normalized database structure that separates
+// users, settlements, projects, tasks, and collaborations into their own collections
+// ============================================================================
+
+// ============================================================================
+// BASE TYPES
+// ============================================================================
+
+export type ProjectStatus = 'not_started' | 'in_progress' | 'completed' | 'on_hold' | 'cancelled';
+export type ProjectPriority = 'low' | 'medium' | 'high' | 'urgent';
+export type TaskStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled';
+export type TaskPriority = 'low' | 'medium' | 'high';
+export type CollaboratorRole = 'viewer' | 'contributor' | 'admin' | 'owner';
+export type CollaborationStatus = 'pending' | 'active' | 'removed' | 'blocked';
+export type ShareAccessType = 'public' | 'link_only' | 'private';
+
+// ============================================================================
+// USER COLLECTION
+// ============================================================================
+
+export interface User {
+  id: string;
+  email: string;
+  displayName?: string;
+  photoURL?: string;
+  username?: string; // Game username/nickname that other players see
+  emailVerified: boolean;
+  providerId: string;
+  createdAt: Date;
+  lastSignIn: Date;
+  
+  // Default settlement for this user
+  defaultSettlementId?: string;
+  
+  // User preferences and settings
+  preferences: UserPreferences;
+  
+  // Metadata
+  metadata: {
+    totalProjects: number;
+    totalCollaborations: number;
+    lastActiveAt: Date;
+    version: number;
+  };
+}
+
+export interface UserPreferences {
+  theme: 'light' | 'dark' | 'auto';
+  language: string;
+  timezone: string;
+  notifications: {
+    email: boolean;
+    taskReminders: boolean;
+    collaborationInvites: boolean;
+    projectUpdates: boolean;
+  };
+  privacy: {
+    showEmail: boolean;
+    allowDiscovery: boolean;
+    shareStatistics: boolean;
+  };
+}
+
+// ============================================================================
+// SETTLEMENT COLLECTION
+// ============================================================================
+
+export interface Settlement {
+  id: string;
+  name: string;
+  description?: string;
+  
+  // Owner relationship
+  ownerId: string; // FK to User
+  
+  // Settlement data
+  inventory: Record<string, number>; // itemId -> quantity
+  
+  // Settings and configuration
+  settings: SettlementSettings;
+  
+  // Metadata
+  createdAt: Date;
+  updatedAt: Date;
+  metadata: {
+    totalProjects: number;
+    totalMembers: number;
+    isActive: boolean;
+    version: number;
+  };
+}
+
+export interface SettlementSettings {
+  isPublic: boolean;
+  allowCollaborations: boolean;
+  defaultProjectVisibility: 'private' | 'settlement' | 'public';
+  inventoryManagement: {
+    enableReservations: boolean;
+    allowOvercommit: boolean;
+    trackingEnabled: boolean;
+  };
+}
+
+// ============================================================================
+// PROJECT COLLECTION
+// ============================================================================
+
+export interface Project {
+  id: string;
+  name: string;
+  description: string;
+  
+  // Relationships
+  ownerId: string; // FK to User
+  settlementId: string; // FK to Settlement
+  
+  // Project data
+  status: ProjectStatus;
+  priority: ProjectPriority;
+  items: ProjectItem[];
+  progressPercentage: number;
+  notes: string;
+  
+  // Sharing and collaboration
+  isShared: boolean;
+  isTemplate: boolean;
+  visibility: 'private' | 'settlement' | 'public';
+  
+  // Dates
+  createdAt: Date;
+  updatedAt: Date;
+  dueDate?: Date;
+  completedAt?: Date;
+  
+  // Metadata
+  metadata: {
+    totalTasks: number;
+    totalCollaborators: number;
+    estimatedHours?: number;
+    actualHours?: number;
+    tags: string[];
+    version: number;
+  };
+}
+
+export interface ProjectItem {
+  itemId: string;
+  name: string;
+  quantity: number;
+  recipeIndex?: number;
+  isCompleted: boolean;
+  notes?: string;
+  reservedQuantity?: number;
+  requiredBy?: Date;
+}
+
+// ============================================================================
+// TASK COLLECTION
+// ============================================================================
+
+export interface Task {
+  id: string;
+  title: string;
+  description: string;
+  
+  // Relationships
+  projectId: string; // FK to Project
+  assignedTo?: string; // FK to User (optional - can be unassigned)
+  createdBy: string; // FK to User
+  
+  // Task data
+  status: TaskStatus;
+  priority: TaskPriority;
+  estimatedHours?: number;
+  actualHours?: number;
+  
+  // Dates
+  createdAt: Date;
+  updatedAt: Date;
+  dueDate?: Date;
+  startedAt?: Date;
+  completedAt?: Date;
+  
+  // Task-specific data
+  requirements: TaskRequirement[];
+  dependencies: string[]; // Array of task IDs this task depends on
+  
+  // Metadata
+  metadata: {
+    tags: string[];
+    attachments: TaskAttachment[];
+    comments: TaskComment[];
+    version: number;
+  };
+}
+
+export interface TaskRequirement {
+  itemId: string;
+  itemName: string;
+  quantityRequired: number;
+  quantityAvailable: number;
+  isOptional: boolean;
+}
+
+export interface TaskAttachment {
+  id: string;
+  name: string;
+  url: string;
+  type: string;
+  size: number;
+  uploadedAt: Date;
+  uploadedBy: string; // FK to User
+}
+
+export interface TaskComment {
+  id: string;
+  content: string;
+  authorId: string; // FK to User
+  createdAt: Date;
+  updatedAt?: Date;
+  isEdited: boolean;
+}
+
+// ============================================================================
+// PROJECT COLLABORATIONS COLLECTION
+// ============================================================================
+
+export interface ProjectCollaboration {
+  id: string;
+  
+  // Relationships
+  projectId: string; // FK to Project
+  userId: string; // FK to User
+  invitedBy: string; // FK to User
+  
+  // Collaboration data
+  role: CollaboratorRole;
+  status: CollaborationStatus;
+  permissions: CollaborationPermissions;
+  
+  // Dates
+  invitedAt: Date;
+  acceptedAt?: Date;
+  lastActiveAt?: Date;
+  removedAt?: Date;
+  
+  // Metadata
+  metadata: {
+    inviteMessage?: string;
+    removalReason?: string;
+    activityLog: CollaborationActivity[];
+    version: number;
+  };
+}
+
+export interface CollaborationPermissions {
+  canEdit: boolean;
+  canDelete: boolean;
+  canInvite: boolean;
+  canManageTasks: boolean;
+  canManageInventory: boolean;
+  canExport: boolean;
+}
+
+export interface CollaborationActivity {
+  action: string;
+  timestamp: Date;
+  details?: Record<string, any>;
+}
+
+// ============================================================================
+// SETTLEMENT COLLABORATION
+// ============================================================================
+
+export interface SettlementCollaboration {
+  id: string;
+  
+  // Relationships
+  settlementId: string; // FK to Settlement
+  userId: string; // FK to User
+  invitedBy: string; // FK to User
+  
+  // Collaboration data
+  role: SettlementCollaboratorRole;
+  status: CollaborationStatus;
+  permissions: SettlementCollaborationPermissions;
+  
+  // Dates
+  invitedAt: Date;
+  acceptedAt?: Date;
+  lastActiveAt?: Date;
+  removedAt?: Date;
+  
+  // Invitation data
+  inviteCode?: string;
+  inviteMessage?: string;
+  
+  // Metadata
+  metadata: {
+    removalReason?: string;
+    activityLog: CollaborationActivity[];
+    version: number;
+  };
+}
+
+export type SettlementCollaboratorRole = 'viewer' | 'contributor' | 'admin' | 'co_owner';
+
+export interface SettlementCollaborationPermissions {
+  // Project permissions
+  canViewProjects: boolean;
+  canCreateProjects: boolean;
+  canEditProjects: boolean;
+  canDeleteProjects: boolean;
+  
+  // Task permissions
+  canViewTasks: boolean;
+  canCreateTasks: boolean;
+  canEditTasks: boolean;
+  canDeleteTasks: boolean;
+  canAssignTasks: boolean;
+  
+  // Inventory permissions
+  canViewInventory: boolean;
+  canEditInventory: boolean;
+  canManageReservations: boolean;
+  
+  // Collaboration permissions
+  canInviteUsers: boolean;
+  canRemoveUsers: boolean;
+  canChangeRoles: boolean;
+  
+  // Settlement permissions
+  canEditSettings: boolean;
+  canDeleteSettlement: boolean;
+  canExportData: boolean;
+}
+
+export interface SettlementInviteLink {
+  id: string;
+  settlementId: string;
+  createdBy: string;
+  inviteCode: string;
+  role: SettlementCollaboratorRole;
+  permissions: SettlementCollaborationPermissions;
+  isActive: boolean;
+  expiresAt?: Date;
+  maxUses?: number;
+  currentUses: number;
+  createdAt: Date;
+  lastUsedAt?: Date;
+}
+
+export interface SettlementMember {
+  user: User;
+  collaboration: SettlementCollaboration;
+  isOwner: boolean;
+}
+
+export interface SettlementWithMembers extends Settlement {
+  members: SettlementMember[];
+  collaborationCount: number;
+}
+
+// ============================================================================
+// SHARED PROJECTS COLLECTION
+// ============================================================================
+
+export interface SharedProject {
+  id: string;
+  
+  // Relationships
+  projectId: string; // FK to Project
+  sharedBy: string; // FK to User
+  
+  // Sharing configuration
+  accessType: ShareAccessType;
+  shareCode?: string; // For link-only access
+  
+  // Metadata
+  sharedAt: Date;
+  lastAccessedAt?: Date;
+  downloadCount: number;
+  viewCount: number;
+  isActive: boolean;
+  
+  // Optional restrictions
+  expiresAt?: Date;
+  maxDownloads?: number;
+  allowedDomains?: string[];
+  
+  metadata: {
+    description?: string;
+    tags: string[];
+    version: number;
+  };
+}
+
+// ============================================================================
+// BUILD LISTS COLLECTION
+// ============================================================================
+
+export interface BuildList {
+  id: string;
+  
+  // Relationships
+  userId: string; // FK to User
+  settlementId: string; // FK to Settlement
+  
+  // Build list data
+  name: string;
+  description?: string;
+  items: BuildListItem[];
+  
+  // Dates
+  createdAt: Date;
+  updatedAt: Date;
+  
+  // Metadata
+  metadata: {
+    totalItems: number;
+    estimatedCost?: number;
+    tags: string[];
+    isTemplate: boolean;
+    version: number;
+  };
+}
+
+export interface BuildListItem {
+  itemId: string;
+  name: string;
+  quantity: number;
+  recipeIndex?: number;
+  priority: number;
+  notes?: string;
+  isCompleted: boolean;
+  addedAt: Date;
+}
+
+// ============================================================================
+// QUERY RESULT TYPES
+// ============================================================================
+
+// For complex queries that join multiple collections
+export interface UserDashboard {
+  user: User;
+  settlements: Settlement[];
+  ownedProjects: Project[];
+  collaborativeProjects: ProjectWithCollaboration[];
+  assignedTasks: TaskWithProject[];
+  recentActivity: ActivityItem[];
+}
+
+export interface ProjectWithCollaboration extends Project {
+  collaboration: ProjectCollaboration;
+  settlement: Settlement;
+}
+
+export interface TaskWithProject extends Task {
+  project: Project;
+  settlement: Settlement;
+}
+
+export interface ProjectDetails {
+  project: Project;
+  settlement: Settlement;
+  tasks: Task[];
+  collaborators: ProjectCollaboratorInfo[];
+  buildLists: BuildList[];
+}
+
+export interface ProjectCollaboratorInfo {
+  collaboration: ProjectCollaboration;
+  user: User;
+}
+
+export interface ActivityItem {
+  id: string;
+  type: 'project_created' | 'task_completed' | 'collaboration_invited' | 'project_shared';
+  entityId: string;
+  entityName: string;
+  actorId: string;
+  actorName: string;
+  timestamp: Date;
+  details: Record<string, any>;
+}
+
+// ============================================================================
+// MIGRATION TYPES
+// ============================================================================
+
+export interface MigrationResult {
+  success: boolean;
+  recordsProcessed: number;
+  recordsCreated: number;
+  recordsSkipped: number;
+  errors: string[];
+  warnings: string[];
+  timeElapsed: number;
+}
+
+export interface MigrationReport {
+  totalUsers: number;
+  totalSettlements: number;
+  totalProjects: number;
+  totalTasks: number;
+  totalCollaborations: number;
+  orphanedRecords: number;
+  duplicateRecords: number;
+  dataIntegrityIssues: string[];
+}
+
+// ============================================================================
+// DATABASE OPERATION TYPES
+// ============================================================================
+
+export interface CreateProjectRequest {
+  name: string;
+  description: string;
+  settlementId: string;
+  priority?: ProjectPriority;
+  items?: ProjectItem[];
+  dueDate?: Date;
+  isShared?: boolean;
+  visibility?: 'private' | 'settlement' | 'public';
+}
+
+export interface CreateTaskRequest {
+  title: string;
+  description: string;
+  projectId: string;
+  assignedTo?: string;
+  priority?: TaskPriority;
+  dueDate?: Date;
+  estimatedHours?: number;
+  requirements?: TaskRequirement[];
+}
+
+export interface CreateCollaborationRequest {
+  projectId: string;
+  userId: string;
+  role: CollaboratorRole;
+  inviteMessage?: string;
+  permissions?: Partial<CollaborationPermissions>;
+}
+
+// ============================================================================
+// SEARCH AND FILTER TYPES
+// ============================================================================
+
+export interface SearchQuery {
+  text?: string;
+  userId?: string;
+  settlementId?: string;
+  status?: ProjectStatus[];
+  priority?: ProjectPriority[];
+  tags?: string[];
+  dateRange?: {
+    start: Date;
+    end: Date;
+    field: 'createdAt' | 'updatedAt' | 'dueDate';
+  };
+  limit?: number;
+  offset?: number;
+  orderBy?: {
+    field: string;
+    direction: 'asc' | 'desc';
+  };
+}
+
+export interface SearchResult<T> {
+  results: T[];
+  totalCount: number;
+  hasMore: boolean;
+  nextCursor?: string;
+}
+
+// ============================================================================
+// FIREBASE SPECIFIC TYPES
+// ============================================================================
+
+export interface FirestoreDocument {
+  id: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface BatchOperation {
+  type: 'create' | 'update' | 'delete';
+  collection: string;
+  documentId: string;
+  data?: any;
+}
+
+export interface DatabaseConfig {
+  enablePersistence: boolean;
+  enableMultiTabSupport: boolean;
+  cacheSizeBytes: number;
+  experimentalForceLongPolling: boolean;
+}
+
+// ============================================================================
+// COMPATIBILITY ALIASES
+// ============================================================================
+// These aliases provide backward compatibility and clearer naming
+
+export type NormalizedUserData = User;
+export type NormalizedSettlement = Settlement;
+export type NormalizedProject = Project;
+export type NormalizedTask = Task;
+export type NormalizedProjectCollaboration = ProjectCollaboration;
+export type NormalizedBuildList = BuildList;
+export type NormalizedSharedProject = SharedProject;
+
+export interface ProjectWithTasks extends Project {
+  tasks: Task[];
+}
+
+export interface CollaborativeProject extends ProjectWithTasks {
+  collaboration: ProjectCollaboration;
+  isCollaborative: true;
+}
+
+export interface SettlementWithProjects extends Settlement {
+  projects: ProjectWithTasks[];
+}
+
+export type UserRole = CollaboratorRole;
+export type MigrationStatus = {
+  status: 'in_progress' | 'completed' | 'failed';
+  migrationId: string;
+  timestamp: Date;
+  stats?: MigrationStats;
+};
+
+export interface MigrationStats {
+  totalUsers: number;
+  migratedUsers: number;
+  totalSettlements: number;
+  migratedSettlements: number;
+  totalProjects: number;
+  migratedProjects: number;
+  totalTasks: number;
+  migratedTasks: number;
+  totalCollaborations: number;
+  migratedCollaborations: number;
+  totalBuildLists: number;
+  migratedBuildLists: number;
+  errors: Array<{
+    type: string;
+    message: string;
+    entityType?: string;
+    entityId?: string;
+    timestamp: Date;
+  }>;
+  startTime: Date | null;
+  endTime: Date | null;
+}
+
+export interface LegacyUserData {
+  id: string;
+  email: string;
+  displayName?: string;
+  photoURL?: string;
+  settlement?: {
+    name: string;
+    inventory: Record<string, number>;
+    projects?: Array<{
+      id: string;
+      name: string;
+      description: string;
+      status: string;
+      items: any[];
+      tasks?: any[];
+    }>;
+  };
+  buildList?: any;
+} 
+
+---
+
+File: RecipeResolver.ts
+// Recipe Resolver with Inventory Pruning Types
+
+export interface ResolverIngredient {
+  item: string;
+  itemId: string;
+  itemName: string;
+  needed: number;
+  available: number;
+  craft: boolean;
+  status: 'already_available' | 'needs_crafting' | 'missing' | 'skipped_nested';
+  ingredients: ResolverIngredient[];
+}
+
+export interface RecipeResolverResult {
+  itemId: string;
+  itemName: string;
+  quantity: number; // <-- Add this line
+  available: number;
+  needed: number;
+  craft: boolean;
+  status: 'already_available' | 'needs_crafting' | 'missing' | 'skipped_nested';
+  children: RecipeResolverResult[];
+  recipeIndex: number;
+  totalMaterialsFlat: MaterialSummary[];
+}
+
+export interface MaterialSummary {
+  itemId: string;
+  itemName: string;
+  needed: number;
+  inventory: number;
+  craft: boolean;
+  status: 'already_available' | 'needs_crafting' | 'missing' | 'skipped_nested';
+  tier: number;
+  rarity: number;
+}
+
+export interface RecipeResolverOptions {
+  targetItemId: string;
+  targetQuantity: number;
+  recipeIndex?: number;
+  maxDepth?: number;
+} 
+
+---
+
+File: Settlement.ts
+export interface Player {
+  id: string;
+  name: string;
+  dateAdded: Date;
+  isActive: boolean;
+}
+
+export interface ProjectItem {
+  itemId: string; // BitCraft item ID
+  itemName: string; // BitCraft item name
+  targetQuantity: number; // How many to craft
+  recipeIndex: number; // Which recipe to use
+  completedQuantity: number; // How many completed
+}
+
+export interface Project {
+  id: string;
+  name: string; // Custom project name
+  description?: string; // Optional description
+  items: ProjectItem[]; // List of items in this project
+  assignedPlayers: string[]; // Player IDs
+  priority: 'low' | 'medium' | 'high';
+  status: 'not_started' | 'in_progress' | 'blocked' | 'completed';
+  deadline?: Date;
+  dateCreated: Date;
+  dateCompleted?: Date;
+  progressPercentage: number;
+  notes?: string;
+}
+
+// Enhanced Task interface with assignment and contribution features
+export interface Task {
+  id: string;
+  type: 'craft' | 'gather' | 'collect'; // Type of task
+  itemId: string; // What item to craft/gather
+  itemName: string; // Item name for display
+  targetQuantity: number; // How many needed
+  completedQuantity: number; // How many done
+  projectId: string; // Which project this belongs to
+  
+  // Enhanced Assignment Features
+  assignedTo: string[]; // Array of user IDs (multiple assignees)
+  assignmentStatus: 'unassigned' | 'assigned' | 'in-progress' | 'completed';
+  assignedBy?: string; // Admin who made the assignment
+  assignedDate?: Date; // When assignment was made
+  
+  // Legacy single assignment (for backwards compatibility)
+  assignedPlayerId?: string;
+  
+  status: 'planned' | 'in_progress' | 'blocked' | 'completed';
+  priority: 'low' | 'medium' | 'high';
+  estimatedDuration?: number; // in minutes
+  actualDuration?: number; // in minutes
+  dateCreated: Date;
+  dateCompleted?: Date;
+  dependencies?: string[]; // Task IDs that must complete first
+  notes?: string;
+  isBaseItem: boolean; // True if this is resource gathering, false if crafting
+  recipeIndex?: number; // For crafting tasks
+  buildingRequirement?: string; // Required building for crafting
+  
+  // New assignment features
+  deadline?: Date; // Task-specific deadline
+  maxAssignees?: number; // Maximum number of people who can be assigned
+  requiresApproval?: boolean; // Whether contributions need approval
+}
+
+// New: Task Contribution tracking
+export interface TaskContribution {
+  id: string; // Format: {taskId}_{userId}_{timestamp}
+  userId: string;
+  taskId: string;
+  settlementId: string;
+  itemsContributed: {
+    itemId: string;
+    itemName: string;
+    quantity: number;
+  }[];
+  submissionDate: Date;
+  status: 'pending' | 'approved' | 'rejected';
+  notes?: string;
+  proofOfWork?: string; // Optional evidence/screenshots
+  approvedBy?: string; // Admin who approved
+  approvedDate?: Date;
+  rejectionReason?: string;
+}
+
+// New: Task Assignment record
+export interface TaskAssignment {
+  id: string;
+  taskId: string;
+  userId: string;
+  assignedBy: string;
+  assignedDate: Date;
+  acceptedDate?: Date;
+  status: 'pending' | 'accepted' | 'declined' | 'completed';
+  estimatedCompletion?: Date;
+  personalNotes?: string;
+}
+
+// Enhanced Settlement Permissions
+export interface SettlementRole {
+  userId: string;
+  role: 'owner' | 'co-owner' | 'admin' | 'contributor' | 'viewer';
+  permissions: {
+    canAssignTasks: boolean;
+    canApproveContributions: boolean;
+    canViewAllContributions: boolean;
+    canSubmitContributions: boolean;
+    canManageMembers: boolean;
+    canEditProjects: boolean;
+  };
+}
+
+export interface SettlementInventoryItem {
+  itemId: string;
+  itemName: string;
+  quantity: number;
+  storageLocation?: string;
+  reservedQuantity: number; // Amount reserved for projects/tasks
+  lastUpdated: Date;
+  addedBy?: string; // Player ID
+}
+
+export interface SettlementInventory {
+  [itemId: string]: SettlementInventoryItem;
+}
+
+export interface SettlementData {
+  id: string;
+  name: string;
+  description?: string;
+  players: Player[];
+  projects: Project[];
+  tasks: Task[];
+  inventory: SettlementInventory;
+  dateCreated: Date;
+  
+  // Enhanced features
+  taskContributions: TaskContribution[];
+  taskAssignments: TaskAssignment[];
+  memberRoles: SettlementRole[];
+  
+  settings?: {
+    autoAssignTasks: boolean;
+    lowStockThreshold: number;
+    enableNotifications: boolean;
+    requireContributionApproval: boolean;
+    maxAssigneesPerTask: number;
+    defaultTaskDeadlineDays: number;
+  };
+} 
+
+---
+

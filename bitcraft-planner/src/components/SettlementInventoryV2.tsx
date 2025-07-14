@@ -74,40 +74,25 @@ export const SettlementInventoryV2: React.FC<SettlementInventoryV2Props> = ({ on
       const { SettlementV2Service } = await import('../services/settlementV2Service');
       const settlementService = new SettlementV2Service();
       
-      // Update settlement inventory - ensure all quantities are numbers
-      const existingQuantity = Number(currentSettlement.inventory[selectedItemId]?.quantity) || 0;
-      const existingReserved = Number(currentSettlement.inventory[selectedItemId]?.reservedQuantity) || 0;
-      
-      const inventoryItem: any = {
+      // Use the proper method that updates tasks automatically
+      await settlementService.addItemsToInventory(currentSettlement.id, [{
         itemId: selectedItemId,
         itemName: item.name,
-        quantity: existingQuantity + quantity, // Both are now guaranteed to be numbers
-        reservedQuantity: existingReserved
-      };
+        quantity: quantity
+      }]);
       
-      // Only include storageLocation if it has a value (Firestore doesn't allow undefined)
-      if (storageLocation && storageLocation.trim()) {
-        inventoryItem.storageLocation = storageLocation.trim();
+      // Refresh the local inventory display
+      const settlement = await settlementService.getSettlement(currentSettlement.id);
+      if (settlement) {
+        const inventoryArray = Object.entries(settlement.inventory).map(([itemId, item]: [string, any]) => ({
+          itemId,
+          itemName: item.itemName || items[itemId]?.name || 'Unknown Item',
+          quantity: Number(item.quantity) || 0,
+          reservedQuantity: Number(item.reservedQuantity) || 0,
+          storageLocation: item.storageLocation
+        }));
+        setInventory(inventoryArray);
       }
-      
-      const updatedInventory = {
-        ...currentSettlement.inventory,
-        [selectedItemId]: inventoryItem
-      };
-      
-      await settlementService.updateSettlement(currentSettlement.id, {
-        inventory: updatedInventory
-      });
-      
-      // Update inventory display
-      const inventoryArray = Object.entries(updatedInventory).map(([itemId, item]: [string, any]) => ({
-        itemId,
-        itemName: item.itemName || items[itemId]?.name || 'Unknown Item',
-        quantity: Number(item.quantity) || 0,
-        reservedQuantity: Number(item.reservedQuantity) || 0,
-        storageLocation: item.storageLocation
-      }));
-      setInventory(inventoryArray);
       
       // Reset form
       setSelectedItemId('');
@@ -147,15 +132,21 @@ export const SettlementInventoryV2: React.FC<SettlementInventoryV2Props> = ({ on
         inventory: updatedInventory
       });
       
-      // Update inventory display
-      const inventoryArray = Object.entries(updatedInventory).map(([itemId, item]: [string, any]) => ({
-        itemId,
-        itemName: item.itemName || items[itemId]?.name || 'Unknown Item',
-        quantity: Number(item.quantity) || 0,
-        reservedQuantity: Number(item.reservedQuantity) || 0,
-        storageLocation: item.storageLocation
-      }));
-      setInventory(inventoryArray);
+      // IMPORTANT: Trigger task updates after inventory change
+      await settlementService.refreshTaskProgressFromInventory(currentSettlement.id);
+      
+      // Refresh the local inventory display
+      const settlement = await settlementService.getSettlement(currentSettlement.id);
+      if (settlement) {
+        const inventoryArray = Object.entries(settlement.inventory).map(([itemId, item]: [string, any]) => ({
+          itemId,
+          itemName: item.itemName || items[itemId]?.name || 'Unknown Item',
+          quantity: Number(item.quantity) || 0,
+          reservedQuantity: Number(item.reservedQuantity) || 0,
+          storageLocation: item.storageLocation
+        }));
+        setInventory(inventoryArray);
+      }
       
     } catch (error) {
       console.error('Error updating inventory quantity:', error);

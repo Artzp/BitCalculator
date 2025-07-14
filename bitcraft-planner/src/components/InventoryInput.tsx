@@ -51,6 +51,7 @@ const InventoryInput: React.FC = () => {
             placeholder="Search for an item..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            onFocus={() => setShowDropdown(true)} // <-- ADD THIS LINE
             className="w-full p-2 bg-gray-600 border border-gray-500 rounded-lg mb-2 text-white"
           />
           {showDropdown && searchTerm && (

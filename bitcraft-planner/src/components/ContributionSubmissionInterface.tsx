@@ -91,17 +91,32 @@ export const ContributionSubmissionInterface: React.FC<ContributionSubmissionInt
   }
 
   // Get tasks assigned to current user (using V2 tasks)
-  const myTasks = v2Tasks.filter(task => 
-    task.assignedTo === user.uid && 
-    (task.status === 'pending' || task.status === 'in_progress')
-  );
+  const myTasks = v2Tasks.filter(task => {
+    // Handle different possible assignedTo formats
+    const isAssignedToMe = task.assignedTo === user.uid || 
+                          task.assignedTo === user.email ||
+                          (Array.isArray(task.assignedTo) && task.assignedTo.includes(user.uid)) ||
+                          (Array.isArray(task.assignedTo) && task.assignedTo.includes(user.email));
+    
+    const isValidStatus = task.status === 'pending' || task.status === 'in_progress';
+    
+    return isAssignedToMe && isValidStatus;
+  });
 
   console.log('Debug: User tasks filtering:', {
     userId: user.uid,
+    userEmail: user.email,
     allTasks: v2Tasks.length,
     myTasks: myTasks.length,
     tasksWithAssignments: v2Tasks.filter(t => t.assignedTo).length,
-    sampleTask: v2Tasks[0]
+    sampleTask: v2Tasks[0],
+    sampleAssignedTask: v2Tasks.find(t => t.assignedTo),
+    allAssignedTasks: v2Tasks.filter(t => t.assignedTo).map(t => ({
+      id: t.id,
+      title: t.title,
+      assignedTo: t.assignedTo,
+      status: t.status
+    }))
   });
 
   const getProjectName = (projectId: string) => {

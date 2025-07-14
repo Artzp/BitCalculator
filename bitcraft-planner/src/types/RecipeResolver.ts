@@ -12,26 +12,28 @@ export interface ResolverIngredient {
 }
 
 export interface RecipeResolverResult {
-  item: string;
   itemId: string;
   itemName: string;
-  needed: number;
+  quantity: number; // <-- Add this line
   available: number;
+  needed: number;
   craft: boolean;
   status: 'already_available' | 'needs_crafting' | 'missing' | 'skipped_nested';
-  ingredients: ResolverIngredient[];
+  children: RecipeResolverResult[];
+  recipeIndex: number;
   totalMaterialsFlat: MaterialSummary[];
 }
 
 export interface MaterialSummary {
-  itemId: string;
-  itemName: string;
-  needed: number;
-  inventory: number;
-  craft: boolean;
-  status: 'already_available' | 'needs_crafting' | 'missing' | 'skipped_nested';
-  tier: number;
-  rarity: number;
+  itemId: string;
+  itemName: string;
+  needed: number;
+  inventory: number;
+  craft: boolean;
+  status: 'already_available' | 'needs_crafting' | 'missing' | 'skipped_nested';
+  tier: number;
+  rarity: number;
+  isBaseItem: boolean; // <-- Add this line
 }
 
 export interface RecipeResolverOptions {
