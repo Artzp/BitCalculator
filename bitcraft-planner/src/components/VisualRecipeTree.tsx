@@ -11,58 +11,97 @@ interface NodePosition {
   x: number;
   y: number;
   level: number;
+  width: number;
+  height: number;
 }
 
 interface TreeNode extends RecipeTreeNode {
   position: NodePosition;
   id: string;
+  parentId?: string;
 }
 
 const VisualRecipeTree: React.FC<VisualRecipeTreeProps> = ({ isOpen, onClose }) => {
   const { buildList, items, inventory } = useItemsStore();
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
 
-  // Improved positioning algorithm for cleaner layout
+  // Advanced tree layout algorithm with proper positioning
   const calculateNodePositions = (tree: RecipeTreeNode): TreeNode[] => {
     const allNodes: TreeNode[] = [];
-    const levelNodes: { [level: number]: RecipeTreeNode[] } = {};
+    const nodeWidth = 180;
+    const nodeHeight = 120;
+    const horizontalSpacing = 40;
+    const verticalSpacing = 80;
     
-    // First, collect all nodes by level
-    const collectNodesByLevel = (node: RecipeTreeNode, level: number = 0) => {
-      if (!levelNodes[level]) levelNodes[level] = [];
-      levelNodes[level].push(node);
+    // First pass: assign levels and collect nodes
+    const assignLevelsAndIds = (node: RecipeTreeNode, level: number = 0, parentId?: string): TreeNode => {
+      const nodeId = `${node.itemId}-${level}-${Math.random().toString(36).substr(2, 9)}`;
       
-      node.children.forEach(child => {
-        collectNodesByLevel(child, level + 1);
-      });
+      const treeNode: TreeNode = {
+        ...node,
+        id: nodeId,
+        parentId,
+        position: { x: 0, y: 0, level, width: nodeWidth, height: nodeHeight },
+        children: []
+      };
+      
+      // Recursively process children
+      treeNode.children = node.children.map(child => 
+        assignLevelsAndIds(child, level + 1, nodeId)
+      );
+      
+      allNodes.push(treeNode);
+      return treeNode;
     };
     
-    collectNodesByLevel(tree);
+    const rootNode = assignLevelsAndIds(tree);
     
-    // Calculate positions with better spacing
-    const nodeWidth = 220;
-    const nodeHeight = 160;
-    const levelHeight = 200;
-    const startY = 80;
-    
-    Object.keys(levelNodes).forEach(levelStr => {
-      const level = parseInt(levelStr);
-      const nodesAtLevel = levelNodes[level];
-      const totalWidth = nodesAtLevel.length * nodeWidth;
-      const startX = Math.max(300, (1200 - totalWidth) / 2); // Center nodes
+    // Second pass: calculate positions using a proper tree layout
+    const calculateSubtreeWidth = (node: TreeNode): number => {
+      if (node.children.length === 0) {
+        return nodeWidth;
+      }
       
-      nodesAtLevel.forEach((node, index) => {
-        const nodeId = `${node.itemId}-${level}-${index}`;
-        const x = startX + (index * nodeWidth) + (nodeWidth / 2);
-        const y = startY + (level * levelHeight);
+      // Find the TreeNode children from allNodes array
+      const treeNodeChildren = node.children.map(child => 
+        allNodes.find(n => n.itemId === child.itemId && n.parentId === node.id)
+      ).filter(Boolean) as TreeNode[];
+      
+      const childrenWidth = treeNodeChildren.reduce((sum, child) => 
+        sum + calculateSubtreeWidth(child), 0
+      );
+      const spacingWidth = (treeNodeChildren.length - 1) * horizontalSpacing;
+      
+      return Math.max(nodeWidth, childrenWidth + spacingWidth);
+    };
+    
+    const positionNodes = (node: TreeNode, x: number, y: number) => {
+      node.position.x = x;
+      node.position.y = y;
+      
+      if (node.children.length > 0) {
+        const subtreeWidth = calculateSubtreeWidth(node);
+        let currentX = x - subtreeWidth / 2;
         
-        allNodes.push({
-          ...node,
-          id: nodeId,
-          position: { x, y, level }
+        // Find the TreeNode children from allNodes array
+        const treeNodeChildren = node.children.map(child => 
+          allNodes.find(n => n.itemId === child.itemId && n.parentId === node.id)
+        ).filter(Boolean) as TreeNode[];
+        
+        treeNodeChildren.forEach(child => {
+          const childSubtreeWidth = calculateSubtreeWidth(child);
+          const childX = currentX + childSubtreeWidth / 2;
+          const childY = y + nodeHeight + verticalSpacing;
+          
+          positionNodes(child, childX, childY);
+          currentX += childSubtreeWidth + horizontalSpacing;
         });
-      });
-    });
+      }
+    };
+    
+    // Start positioning from the root
+    const totalWidth = calculateSubtreeWidth(rootNode);
+    positionNodes(rootNode, totalWidth / 2, 60);
     
     return allNodes;
   };
@@ -87,89 +126,124 @@ const VisualRecipeTree: React.FC<VisualRecipeTreeProps> = ({ isOpen, onClose }) 
     const isSelected = selectedNode === node.id;
     const isRawMaterial = node.children.length === 0;
     
-    // Get the first letter of item name for the icon
-    const iconLetter = item?.name?.charAt(0)?.toUpperCase() || '?';
+    // Get appropriate emoji/icon for the item type
+    const getItemIcon = () => {
+      if (isRoot) return '🎯';
+      if (isRawMaterial) return '🌿';
+      if (hasEnough) return '✅';
+      return '⚙️';
+    };
+    
+    const getNodeColors = () => {
+      if (isRoot) return {
+        bg: 'from-purple-600 to-purple-700',
+        border: 'border-purple-400',
+        glow: 'shadow-purple-500/25'
+      };
+      if (hasEnough) return {
+        bg: 'from-emerald-600 to-emerald-700',
+        border: 'border-emerald-400',
+        glow: 'shadow-emerald-500/25'
+      };
+      if (isRawMaterial) return {
+        bg: 'from-amber-600 to-amber-700',
+        border: 'border-amber-400',
+        glow: 'shadow-amber-500/25'
+      };
+      return {
+        bg: 'from-blue-600 to-blue-700',
+        border: 'border-blue-400',
+        glow: 'shadow-blue-500/25'
+      };
+    };
+    
+    const colors = getNodeColors();
     
     return (
       <div
         key={node.id}
-        className={`absolute cursor-pointer transition-all duration-200 ${
-          isSelected ? 'z-20 scale-105' : 'z-10'
+        className={`absolute cursor-pointer transition-all duration-300 ${
+          isSelected ? 'z-20 scale-110' : 'z-10 hover:scale-105'
         }`}
         style={{
           left: node.position.x,
           top: node.position.y,
-          transform: 'translate(-50%, -50%)'
+          transform: 'translate(-50%, -50%)',
+          width: node.position.width,
+          height: node.position.height
         }}
         onClick={() => setSelectedNode(isSelected ? null : node.id)}
       >
-        <div className={`relative rounded-lg border-2 p-4 w-[200px] shadow-lg transition-all duration-200 ${
-          isRoot 
-            ? 'bg-purple-600 border-purple-400' 
-            : hasEnough 
-            ? 'bg-green-600 border-green-400'
-            : isRawMaterial 
-            ? 'bg-orange-600 border-orange-400' 
-            : 'bg-blue-600 border-blue-400'
-        } ${isSelected ? 'ring-2 ring-white shadow-2xl' : 'hover:shadow-xl'}`}>
+        <div className={`relative h-full rounded-xl border-2 ${colors.border} bg-gradient-to-br ${colors.bg} 
+          shadow-xl ${colors.glow} transition-all duration-300 backdrop-blur-sm
+          ${isSelected ? 'ring-4 ring-white/50 shadow-2xl' : 'hover:shadow-2xl'}`}>
           
-          {/* Large Letter Icon */}
-          <div className="flex justify-center mb-3">
-            <div className={`w-12 h-12 rounded-lg flex items-center justify-center text-2xl font-bold text-white ${
-              isRoot 
-                ? 'bg-purple-700' 
-                : hasEnough 
-                ? 'bg-green-700'
-                : isRawMaterial 
-                ? 'bg-orange-700' 
-                : 'bg-blue-700'
-            }`}>
-              {iconLetter}
+          {/* Glow effect for selected node */}
+          {isSelected && (
+            <div className="absolute inset-0 rounded-xl bg-white/10 animate-pulse"></div>
+          )}
+          
+          {/* Header with icon and status */}
+          <div className="flex items-center justify-between p-3 border-b border-white/20">
+            <div className="text-2xl">{getItemIcon()}</div>
+            <div className="text-xs text-white/80 font-medium">
+              Tier {node.position.level}
             </div>
           </div>
           
-          {/* Item Name */}
-          <div className="text-white font-bold text-sm text-center mb-2 leading-tight min-h-[32px] flex items-center justify-center">
-            {item?.name || 'Unknown Item'}
+          {/* Item name */}
+          <div className="px-3 py-2">
+            <h3 className="text-white font-bold text-sm leading-tight text-center min-h-[32px] flex items-center justify-center">
+              {item?.name || 'Unknown Item'}
+            </h3>
           </div>
           
-          {/* Quantity */}
-          <div className="text-center mb-3">
-            <span className="text-white font-mono text-lg font-semibold">
-              Qty: {node.quantity.toLocaleString()}
-            </span>
+          {/* Quantity display */}
+          <div className="px-3 py-1">
+            <div className="bg-black/20 rounded-lg p-2 text-center">
+              <div className="text-white/70 text-xs">Need</div>
+              <div className="text-white font-bold text-lg">
+                {node.quantity.toLocaleString()}
+              </div>
+            </div>
           </div>
           
-          {/* Status Badge */}
-          <div className="flex justify-center mb-2">
-            {isRoot && (
-              <span className="px-3 py-1 bg-purple-800/60 text-purple-200 text-xs rounded-full font-medium border border-purple-400/50">
-                Target
-              </span>
-            )}
-            {isRawMaterial && !isRoot && (
-              <span className="px-3 py-1 bg-orange-800/60 text-orange-200 text-xs rounded-full font-medium border border-orange-400/50">
-                Raw Material
-              </span>
-            )}
-            {hasEnough && !isRoot && (
-              <span className="px-3 py-1 bg-green-800/60 text-green-200 text-xs rounded-full font-medium border border-green-400/50">
-                Have: {inventoryQuantity}
-              </span>
-            )}
-            {!isRawMaterial && !isRoot && !hasEnough && (
-              <span className="px-3 py-1 bg-blue-800/60 text-blue-200 text-xs rounded-full font-medium border border-blue-400/50">
-                Intermediate
-              </span>
-            )}
-          </div>
-          
-          {/* Recipe Requirement */}
-          {item?.recipes?.[0]?.building_requirement && (
-            <div className="text-xs text-white/80 text-center leading-tight">
-              Requires: {item.recipes[0].building_requirement}
+          {/* Inventory status */}
+          {inventoryQuantity > 0 && (
+            <div className="px-3 py-1">
+              <div className="bg-white/10 rounded-lg p-1 text-center">
+                <div className="text-white/70 text-xs">Have: {inventoryQuantity}</div>
+              </div>
             </div>
           )}
+          
+          {/* Building requirement */}
+          {item?.recipes?.[0]?.building_requirement && (
+            <div className="px-3 py-1">
+              <div className="text-xs text-white/60 text-center truncate">
+                🏗️ {item.recipes[0].building_requirement}
+              </div>
+            </div>
+          )}
+          
+          {/* Status indicator */}
+          <div className="absolute -top-2 -right-2">
+            {isRoot && (
+              <div className="w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center text-white text-xs font-bold border-2 border-white">
+                T
+              </div>
+            )}
+            {hasEnough && !isRoot && (
+              <div className="w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center text-white text-xs border-2 border-white">
+                ✓
+              </div>
+            )}
+            {isRawMaterial && !isRoot && !hasEnough && (
+              <div className="w-6 h-6 bg-amber-500 rounded-full flex items-center justify-center text-white text-xs border-2 border-white">
+                R
+              </div>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -182,27 +256,60 @@ const VisualRecipeTree: React.FC<VisualRecipeTreeProps> = ({ isOpen, onClose }) 
       node.children.forEach(child => {
         const childNode = nodes.find(n => 
           n.itemId === child.itemId && 
-          n.position.level === node.position.level + 1
+          n.parentId === node.id
         );
         
         if (childNode) {
           const startX = node.position.x;
-          const startY = node.position.y + 60; // Bottom of parent node
+          const startY = node.position.y + (node.position.height / 2);
           const endX = childNode.position.x;
-          const endY = childNode.position.y - 60; // Top of child node
+          const endY = childNode.position.y - (childNode.position.height / 2);
+          
+          // Calculate control points for smooth curves
+          const midY = startY + (endY - startY) / 2;
+          const controlPoint1X = startX;
+          const controlPoint1Y = midY;
+          const controlPoint2X = endX;
+          const controlPoint2Y = midY;
+          
+          // Create curved path
+          const pathData = `M ${startX} ${startY} C ${controlPoint1X} ${controlPoint1Y}, ${controlPoint2X} ${controlPoint2Y}, ${endX} ${endY}`;
           
           connections.push(
-            <line
-              key={`${node.id}-${childNode.id}`}
-              x1={startX}
-              y1={startY}
-              x2={endX}
-              y2={endY}
-              stroke="#64748b"
-              strokeWidth="3"
-              markerEnd="url(#arrowhead)"
-              className="drop-shadow-sm"
-            />
+            <g key={`${node.id}-${childNode.id}`}>
+              {/* Glow effect */}
+              <path
+                d={pathData}
+                stroke="rgba(148, 163, 184, 0.3)"
+                strokeWidth="6"
+                fill="none"
+                className="blur-sm"
+              />
+              {/* Main line */}
+              <path
+                d={pathData}
+                stroke="#94a3b8"
+                strokeWidth="2"
+                fill="none"
+                markerEnd="url(#arrowhead)"
+                className="transition-all duration-300 hover:stroke-white"
+              />
+              {/* Connection dots */}
+              <circle
+                cx={startX}
+                cy={startY}
+                r="4"
+                fill="#94a3b8"
+                className="transition-all duration-300"
+              />
+              <circle
+                cx={endX}
+                cy={endY}
+                r="4"
+                fill="#94a3b8"
+                className="transition-all duration-300"
+              />
+            </g>
           );
         }
       });

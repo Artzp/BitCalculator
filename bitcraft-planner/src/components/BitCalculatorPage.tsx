@@ -8,7 +8,10 @@ import BuildSteps from './BuildSteps';
 
 const BitCalculatorPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('summary');
-  const { buildList } = useItemsStore();
+  const { buildList, getRequiredMaterials } = useItemsStore();
+
+  // Get required materials for potential future use
+  const materials = getRequiredMaterials();
 
   return (
     <div className="flex-grow flex flex-col md:flex-row gap-6 p-6 h-[calc(100vh-150px)]">
@@ -62,13 +65,24 @@ const BitCalculatorPage: React.FC = () => {
   );
 };
 
-const TabButton = ({ title, activeTab, setActiveTab, tabName }: { title: string, activeTab: string, setActiveTab: (name: string) => void, tabName: string }) => (
-  <button 
-    onClick={() => setActiveTab(tabName)} 
-    className={`flex-1 p-3 text-center font-medium text-sm transition-colors focus:outline-none 
+const TabButton = ({ title, activeTab, setActiveTab, tabName, badge }: {
+  title: string,
+  activeTab: string,
+  setActiveTab: (name: string) => void,
+  tabName: string,
+  badge?: number | string
+}) => (
+  <button
+    onClick={() => setActiveTab(tabName)}
+    className={`flex-1 p-3 text-center font-medium text-sm transition-colors focus:outline-none relative
       ${activeTab === tabName ? 'text-white border-b-2 border-blue-500' : 'text-gray-400 hover:bg-gray-700 hover:text-white'}`}
   >
     {title}
+    {badge && (
+      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+        {badge}
+      </span>
+    )}
   </button>
 );
 

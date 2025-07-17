@@ -11,7 +11,7 @@ const MaterialSummary: React.FC = () => {
       rawMaterials: allReqs.filter(m => m.isBaseItem && m.missing > 0),
       intermediateMaterials: allReqs.filter(m => !m.isBaseItem && m.missing > 0),
     };
-  }, [buildList, inventory, getRequiredMaterials]);
+  }, [buildList, inventory]);
 
   const renderMaterialList = (title: string, materials: MaterialRequirement[]) => {
     if (materials.length === 0) return null;
