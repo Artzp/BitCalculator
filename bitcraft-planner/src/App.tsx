@@ -558,7 +558,7 @@ function App() {
       <AuthHeader />
       <SaveStatusIndicator saveStatus={saveStatus} />
       
-      <div className="container mx-auto px-4 py-4">
+      <div className="w-full px-4 py-4">
         <Tabs activeTab={currentPage} onTabClick={handleTabChange} />
         {currentPage === 'calculator' && (
           <BitCalculatorPage />
