@@ -57,7 +57,7 @@ const BitCalculatorPage: React.FC = () => {
         <div className={`transition-all duration-300 ease-in-out flex flex-col h-full ${
           catalogCollapsed 
             ? 'w-16 md:flex hidden' 
-            : 'w-full md:w-96 lg:w-[420px] xl:w-[480px]'
+            : 'w-full md:w-96 lg:w-[420px] xl:w-[520px] 2xl:w-[600px]'
         } ${mobileView !== 'catalog' ? 'hidden md:flex' : 'flex'}`}>
           
           {catalogCollapsed ? (
@@ -87,7 +87,7 @@ const BitCalculatorPage: React.FC = () => {
 
         {/* Center Panel: Build Queue */}
         <div className={`flex flex-col h-full transition-all duration-300 min-h-0 ${
-          catalogCollapsed ? 'w-full md:w-96 lg:w-[420px]' : 'w-full md:w-80 lg:w-96'
+          catalogCollapsed ? 'w-full md:w-96 lg:w-[420px] xl:w-[480px]' : 'w-full md:w-80 lg:w-96 xl:w-[400px]'
         } ${mobileView !== 'queue' ? 'hidden md:flex' : 'flex'}`}>
           <div className="bg-slate-800/60 backdrop-blur-sm rounded-xl border border-slate-700/50 flex-1 flex flex-col shadow-xl min-h-0">
             <div className="p-4 border-b border-slate-700/50 flex-shrink-0">
