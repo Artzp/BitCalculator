@@ -1,61 +1,208 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useItemsStore } from '../state/useItemsStore';
 import { XCircleIcon } from '@heroicons/react/24/solid';
+import { RARITY_COLORS, RARITY_NAMES } from '../utils/constants';
 
 const BuildList: React.FC = () => {
-  const { buildList, removeFromBuildList, updateBuildListItem, clearBuildList } = useItemsStore();
+  const { buildList, removeFromBuildList, updateBuildListItem, clearBuildList, items } = useItemsStore();
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+
+  const totalItems = buildList.reduce((sum, item) => sum + item.quantity, 0);
+  const totalValue = buildList.reduce((sum, item) => {
+    const itemData = items[item.itemId];
+    return sum + (itemData?.tier || 0) * item.quantity;
+  }, 0);
 
   if (buildList.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-center text-gray-400">
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mb-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4M4 7s-2 2-2 4" />
-        </svg>
-        <p className="font-semibold text-lg">Your queue is empty</p>
-        <p className="text-sm">Add items from the catalog to start a build</p>
+      <div className="flex flex-col items-center justify-center h-full text-center text-slate-400 p-6">
+        <div className="w-16 h-16 bg-slate-700/50 rounded-full flex items-center justify-center mb-4">
+          <span className="text-2xl">🎯</span>
+        </div>
+        <h3 className="font-semibold text-lg text-slate-300 mb-2">Queue is empty</h3>
+        <p className="text-sm text-slate-500 max-w-48">
+          Add items from the catalog to start planning your build
+        </p>
       </div>
     );
   }
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-grow overflow-y-auto pr-2 -mr-2 space-y-3">
-        {buildList.map((item, index) => (
-          <div key={`${item.itemId}-${index}`} className="bg-gray-700 p-3 rounded-lg flex items-center justify-between animate-fade-in">
-            {/* Item Info */}
-            <div>
-              <p className="font-semibold text-white truncate">{useItemsStore.getState().items[item.itemId]?.name}</p>
-              <p className="text-sm text-gray-400">
-                Tier {useItemsStore.getState().items[item.itemId]?.tier}
-              </p>
-            </div>
-            {/* Controls */}
-            <div className="flex items-center space-x-2">
-              <input
-                type="number"
-                value={item.quantity}
-                onChange={(e) => updateBuildListItem(item.itemId, Number(e.target.value))}
-                className="w-20 p-1 text-center bg-gray-600 border border-gray-500 rounded-md text-white"
-                min="1"
-              />
+      {/* Queue Stats */}
+      <div className="p-3 bg-slate-900/50 rounded-lg mb-4 border border-slate-700/50 flex-shrink-0">
+        <div className="grid grid-cols-2 gap-4 text-center">
+          <div>
+            <div className="text-2xl font-bold text-white">{buildList.length}</div>
+            <div className="text-xs text-slate-400">Types</div>
+          </div>
+          <div>
+            <div className="text-2xl font-bold text-blue-400">{totalItems}</div>
+            <div className="text-xs text-slate-400">Total Items</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Build Items */}
+      <div className="flex-1 space-y-2 pr-1 min-h-0 overflow-y-auto">
+        {buildList.map((buildItem, index) => {
+          const item = items[buildItem.itemId];
+          if (!item) return null;
+
+          const rarityColor = RARITY_COLORS[item.rarity as keyof typeof RARITY_COLORS] || '#64748b';
+          const rarityName = RARITY_NAMES[item.rarity as keyof typeof RARITY_NAMES] || 'Unknown';
+
+          return (
+            <BuildQueueItem
+              key={`${buildItem.itemId}-${index}`}
+              buildItem={buildItem}
+              item={item}
+              rarityColor={rarityColor}
+              rarityName={rarityName}
+              onUpdateQuantity={(quantity) => updateBuildListItem(buildItem.itemId, quantity)}
+              onRemove={() => removeFromBuildList(buildItem.itemId)}
+            />
+          );
+        })}
+      </div>
+
+      {/* Clear Button */}
+      <div className="pt-4 mt-4 border-t border-slate-700/50 flex-shrink-0">
+        {!showClearConfirm ? (
+          <button
+            onClick={() => setShowClearConfirm(true)}
+            className="w-full py-2.5 bg-red-500/20 hover:bg-red-500/30 text-red-300 font-medium rounded-lg transition-all duration-200 border border-red-500/30 hover:border-red-500/50"
+          >
+            Clear Build List
+          </button>
+        ) : (
+          <div className="space-y-2">
+            <p className="text-sm text-slate-400 text-center">Are you sure?</p>
+            <div className="grid grid-cols-2 gap-2">
               <button
-                onClick={() => removeFromBuildList(item.itemId)}
-                className="text-gray-400 hover:text-red-500 transition-colors"
+                onClick={() => {
+                  clearBuildList();
+                  setShowClearConfirm(false);
+                }}
+                className="py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors text-sm"
               >
-                <XCircleIcon className="h-6 w-6" />
+                Yes, Clear
+              </button>
+              <button
+                onClick={() => setShowClearConfirm(false)}
+                className="py-2 bg-slate-600 hover:bg-slate-500 text-white font-medium rounded-lg transition-colors text-sm"
+              >
+                Cancel
               </button>
             </div>
           </div>
-        ))}
+        )}
       </div>
-      <div className="pt-4 mt-auto">
-        <button
-          onClick={clearBuildList}
-          className="w-full py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors"
-        >
-          Clear Build List
-        </button>
+    </div>
+  );
+};
+
+// Enhanced Build Queue Item Component
+const BuildQueueItem = ({ buildItem, item, rarityColor, rarityName, onUpdateQuantity, onRemove }: {
+  buildItem: any;
+  item: any;
+  rarityColor: string;
+  rarityName: string;
+  onUpdateQuantity: (quantity: number) => void;
+  onRemove: () => void;
+}) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [tempQuantity, setTempQuantity] = useState(buildItem.quantity);
+
+  const handleQuantitySubmit = () => {
+    onUpdateQuantity(Math.max(1, tempQuantity));
+    setIsEditing(false);
+  };
+
+  const getTierIcon = (tier: number) => {
+    if (tier <= 2) return '🌱';
+    if (tier <= 4) return '⚙️';
+    if (tier <= 6) return '💎';
+    return '👑';
+  };
+
+  const getRarityIcon = (rarity: number) => {
+    const icons = ['⚪', '🟢', '🔵', '🟣', '🟡'];
+    return icons[rarity] || '⚪';
+  };
+
+  return (
+    <div className="group relative bg-slate-700/30 hover:bg-slate-700/50 border border-slate-600/50 hover:border-slate-500/70 rounded-xl p-3 transition-all duration-200">
+      <div className="flex items-center justify-between">
+        <div className="flex-1 min-w-0 flex items-center gap-3">
+          {/* Item Icon */}
+          <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-slate-600/50 flex items-center justify-center">
+            <span className="text-lg">🔨</span>
+          </div>
+          
+          {/* Item Info */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="font-semibold text-white truncate">{item.name}</h3>
+            </div>
+            <div className="flex items-center gap-3 text-xs">
+              <div className="flex items-center gap-1">
+                <span>{getTierIcon(item.tier)}</span>
+                <span className="text-slate-400">T{item.tier}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span>{getRarityIcon(item.rarity)}</span>
+                <span style={{ color: rarityColor }}>{rarityName}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Quantity and Controls */}
+        <div className="flex-shrink-0 flex items-center gap-2">
+          {isEditing ? (
+            <div className="flex items-center gap-1">
+              <input
+                type="number"
+                min="1"
+                value={tempQuantity}
+                onChange={(e) => setTempQuantity(parseInt(e.target.value) || 1)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleQuantitySubmit();
+                  if (e.key === 'Escape') {
+                    setTempQuantity(buildItem.quantity);
+                    setIsEditing(false);
+                  }
+                }}
+                className="w-16 px-2 py-1 text-center bg-slate-600 border border-slate-500 rounded-md text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                autoFocus
+                onBlur={handleQuantitySubmit}
+              />
+            </div>
+          ) : (
+            <button
+              onClick={() => {
+                setTempQuantity(buildItem.quantity);
+                setIsEditing(true);
+              }}
+              className="px-3 py-1.5 bg-slate-600/50 hover:bg-slate-500/50 rounded-lg transition-colors"
+            >
+              <span className="text-white font-medium">{buildItem.quantity}</span>
+            </button>
+          )}
+          
+          <button
+            onClick={onRemove}
+            className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-500/20 rounded-lg transition-all duration-200"
+            title="Remove from queue"
+          >
+            <XCircleIcon className="h-5 w-5" />
+          </button>
+        </div>
       </div>
+
+      {/* Hover Effect */}
+      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none rounded-xl"></div>
     </div>
   );
 };
