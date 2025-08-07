@@ -224,8 +224,11 @@ export const ContributionSubmissionInterface: React.FC<ContributionSubmissionInt
       const { SettlementV2Service } = await import('../services/settlementV2Service');
       const settlementService = new SettlementV2Service();
       
-      // Create contribution record - don't include undefined fields
-      const contribution: any = {
+       // Load profile to use nickname/username for privacy-friendly submittedBy display
+       const profile = await settlementService.getUser(user.uid);
+
+       // Create contribution record - don't include undefined fields
+       const contribution: any = {
         userId: user.uid,
         taskId: selectedTask.id,
         settlementId: currentSettlement.id,
@@ -233,7 +236,7 @@ export const ContributionSubmissionInterface: React.FC<ContributionSubmissionInt
         submissionDate: new Date(),
         status: 'pending' as const, // Always pending for admin approval
         submittedBy: {
-          displayName: user.displayName || user.email || 'Unknown User',
+          displayName: profile?.username || profile?.customDisplayName || profile?.displayName || user.email || 'Unknown User',
           email: user.email || 'no-email@example.com'
         }
       };

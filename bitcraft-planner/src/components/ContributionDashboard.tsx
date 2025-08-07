@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useSettlementStore } from '../state/useSettlementStore';
 import { TaskContribution, Task, Player } from '../types/Settlement';
 import { useAuth } from '../hooks/useAuth';
+import { getPrivateDisplayName } from '../utils/userUtils';
 
 interface ContributionDashboardProps {
   onClose: () => void;
@@ -118,7 +119,7 @@ export const ContributionDashboard: React.FC<ContributionDashboardProps> = ({ on
       return {
         player: {
           id: member.collaboration.userId,
-          name: member.user.displayName || member.user.email || 'Unknown User'
+          name: getPrivateDisplayName(member, user?.uid)
         },
         totalContributions: playerContributions.length,
         approvedContributions: playerContributions.filter(c => c.status === 'approved').length,
@@ -202,7 +203,7 @@ export const ContributionDashboard: React.FC<ContributionDashboardProps> = ({ on
 
   const getPlayerName = (playerId: string) => {
     const player = settlementMembers.find(m => m.collaboration.userId === playerId);
-    return player ? player.user.displayName || player.user.email || 'Unknown Player' : 'Unknown Player';
+    return player ? getPrivateDisplayName(player, user?.uid) : 'Unknown Player';
   };
 
   const getTaskName = (taskId: string) => {
@@ -500,7 +501,7 @@ export const ContributionDashboard: React.FC<ContributionDashboardProps> = ({ on
                 <option value="all">All Players</option>
                 {settlementMembers.map(member => (
                   <option key={member.collaboration.userId} value={member.collaboration.userId}>
-                    {member.user.displayName || member.user.email || 'Unknown Player'}
+                    {getPrivateDisplayName(member, user?.uid)}
                   </option>
                 ))}
               </select>

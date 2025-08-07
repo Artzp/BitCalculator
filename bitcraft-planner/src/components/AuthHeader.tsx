@@ -55,7 +55,7 @@ export const AuthHeader: React.FC = () => {
   };
 
   const handleDiscordClick = () => {
-    window.open('https://discord.gg/bgd4PChJ', '_blank', 'noopener,noreferrer');
+    window.open('https://discord.gg/trDnZVXd', '_blank', 'noopener,noreferrer');
   };
 
   return (
@@ -78,7 +78,7 @@ export const AuthHeader: React.FC = () => {
         {user ? (
           <div className="flex items-center space-x-4">
             <div className="text-sm text-gray-600">
-              <div>Welcome, <span className="font-semibold">{userProfileData?.username || user.displayName || user.email || 'User'}</span></div>
+              <div>Welcome, <span className="font-semibold">{userProfileData?.username || userProfileData?.customDisplayName || user.displayName || user.email || 'User'}</span></div>
               {userProfileData?.username && (
                 <div className="text-xs text-gray-500">{user.email}</div>
               )}

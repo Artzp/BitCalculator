@@ -471,7 +471,7 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
     const roleFilter = assignmentRoleFilter[taskId] || 'all';
     
     return settlementMembers.filter(member => {
-      const userName = member.user?.displayName || member.user?.email || 'Unknown User';
+      const userName = getPrivateDisplayName(member, user?.uid);
       const userRole = member.collaboration?.role || 'viewer';
       
       // Search filter
@@ -1188,7 +1188,7 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
                     <option value="assigned">Assigned</option>
                     {settlementMembers.map(member => (
                       <option key={member.collaboration?.userId || member.user?.id} value={member.collaboration?.userId || member.user?.id}>
-                        {member.user?.displayName || member.user?.email || 'Unknown User'}
+                       {getPrivateDisplayName(member, user?.uid)}
                       </option>
                     ))}
                   </select>
@@ -1252,7 +1252,7 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
                               {assignedMembers.length > 0 ? (
                                 assignedMembers.map((member, index) => (
                                   <span key={index} className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded">
-                                    👤 {member.user?.displayName || member.user?.email || 'Unknown User'}
+                                    👤 {getPrivateDisplayName(member, user?.uid)}
                                   </span>
                                 ))
                               ) : (
@@ -1367,7 +1367,7 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
                                                 />
                                                 <div className="flex-1 min-w-0">
                                                   <div className={`text-sm ${isCurrentlyAssigned ? 'font-semibold text-purple-700' : 'text-gray-900'}`}>
-                                                    {member.user?.displayName || member.user?.email || 'Unknown User'}
+                                                     {getPrivateDisplayName(member, user?.uid)}
                                                     {isCurrentlyAssigned && (
                                                       <span className="ml-2 text-xs text-purple-600">(currently assigned)</span>
                                                     )}

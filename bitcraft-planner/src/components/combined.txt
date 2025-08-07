@@ -96,7 +96,7 @@ export const AuthHeader: React.FC = () => {
   };
 
   const handleDiscordClick = () => {
-    window.open('https://discord.gg/bgd4PChJ', '_blank', 'noopener,noreferrer');
+    window.open('https://discord.gg/trDnZVXd', '_blank', 'noopener,noreferrer');
   };
 
   return (
@@ -986,7 +986,7 @@ export const AuthHeader: React.FC = () => {
   };
 
   const handleDiscordClick = () => {
-    window.open('https://discord.gg/bgd4PChJ', '_blank', 'noopener,noreferrer');
+    window.open('https://discord.gg/trDnZVXd, '_blank', 'noopener,noreferrer');
   };
 
   return (

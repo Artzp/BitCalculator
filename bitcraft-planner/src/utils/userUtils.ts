@@ -15,7 +15,7 @@ export const getUserDisplayName = (user: UserWithUsername | null | undefined): s
   if (!user) return 'Unknown User';
   
   // Priority: username (game nickname) > displayName > email > fallback
-  return user.username || user.displayName || user.email || 'Unknown User';
+  return user.username || (user as any).customDisplayName || user.displayName || user.email || 'Unknown User';
 };
 
 /**
@@ -34,8 +34,14 @@ export const getAuthUserDisplayName = (user: User | null | undefined): string =>
 export const getMemberDisplayName = (member: any): string => {
   if (!member || !member.user) return 'Unknown User';
   
-  // Priority: displayName > email > 'Unknown User'
-  return member.user.displayName || member.user.email || 'Unknown User';
+  // Priority: username/customDisplayName > displayName > email > 'Unknown User'
+  return (
+    member.user.username ||
+    member.user.customDisplayName ||
+    member.user.displayName ||
+    member.user.email ||
+    'Unknown User'
+  );
 };
 
 /**
