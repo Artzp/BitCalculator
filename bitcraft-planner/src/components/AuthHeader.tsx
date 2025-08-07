@@ -55,7 +55,7 @@ export const AuthHeader: React.FC = () => {
   };
 
   const handleDiscordClick = () => {
-    window.open('https://discord.gg/trDnZVXd', '_blank', 'noopener,noreferrer');
+    window.open('https://discord.gg/FkYCumCYkp', '_blank', 'noopener,noreferrer');
   };
 
   return (

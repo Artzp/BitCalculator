@@ -264,6 +264,13 @@ const ProjectManagementV2: React.FC<ProjectManagementV2Props> = ({
                   </button>
                 </div>
               </div>
+              {/* Rename project */}
+              <div className="mt-2">
+                <details>
+                  <summary className="text-sm text-gray-600 cursor-pointer">Rename / Edit Description</summary>
+                  <ProjectRenameEdit project={project} settlementService={settlementService} onProjectsUpdate={onProjectsUpdate} />
+                </details>
+              </div>
 
               {/* Project Items */}
               {project.items.length > 0 && (
@@ -448,3 +455,39 @@ const ProjectManagementV2: React.FC<ProjectManagementV2Props> = ({
 };
 
 export default ProjectManagementV2; 
+
+// Inline sub-component for renaming/editing a project
+const ProjectRenameEdit: React.FC<{ project: ProjectV2; settlementService: SettlementV2Service; onProjectsUpdate: () => void }>
+ = ({ project, settlementService, onProjectsUpdate }) => {
+  const [name, setName] = useState(project.name);
+  const [description, setDescription] = useState(project.description);
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      await settlementService.updateProject(project.id, { name: name.trim(), description: description });
+      onProjectsUpdate();
+    } finally { setSaving(false); }
+  };
+
+  return (
+    <div className="p-3 bg-gray-50 rounded border mt-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div>
+          <label className="block text-sm font-medium mb-1">Name</label>
+          <input value={name} onChange={(e) => setName(e.target.value)} className="w-full px-3 py-2 border rounded" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Description</label>
+          <input value={description} onChange={(e) => setDescription(e.target.value)} className="w-full px-3 py-2 border rounded" />
+        </div>
+      </div>
+      <div className="mt-2 flex gap-2">
+        <button onClick={handleSave} disabled={saving} className="px-3 py-1 bg-green-600 text-white rounded text-sm">
+          {saving ? 'Saving...' : 'Save'}
+        </button>
+      </div>
+    </div>
+  );
+};

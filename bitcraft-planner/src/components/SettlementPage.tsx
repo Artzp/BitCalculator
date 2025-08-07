@@ -43,6 +43,9 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
   const [showInviteDialog, setShowInviteDialog] = useState<boolean>(false);
   const [showJoinDialog, setShowJoinDialog] = useState<boolean>(false);
   const [showManageMembersDialog, setShowManageMembersDialog] = useState<boolean>(false);
+  // Invite controls
+  const [inviteMaxUses, setInviteMaxUses] = useState<string>('1');
+  const [inviteNoExpiry, setInviteNoExpiry] = useState<boolean>(false);
   
   // New task assignment and contribution states
   const [showTaskAssignmentInterface, setShowTaskAssignmentInterface] = useState<boolean>(false);
@@ -292,6 +295,29 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
     } catch (err) {
       console.error('Error creating settlement:', err);
       setError('Failed to create settlement');
+    }
+  };
+
+  const handleRenameSettlement = async (newName: string) => {
+    if (!currentSettlement) return;
+    try {
+      await settlementService.updateSettlement(currentSettlement.id, { name: newName.trim() } as any);
+      await loadInitialData();
+    } catch (err) {
+      console.error('Error renaming settlement:', err);
+      setError('Failed to rename settlement');
+    }
+  };
+
+  const handleDeleteSettlement = async () => {
+    if (!currentSettlement || !user) return;
+    if (!window.confirm('Delete this settlement and all its data? This cannot be undone.')) return;
+    try {
+      await settlementService.deleteSettlement(currentSettlement.id);
+      await loadInitialData();
+    } catch (err) {
+      console.error('Error deleting settlement:', err);
+      setError('Failed to delete settlement');
     }
   };
 
@@ -553,13 +579,14 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
     if (!currentSettlement || !user) return;
     
     try {
+      const parsedMax = inviteNoExpiry ? 0 : Math.max(0, parseInt(inviteMaxUses || '1') || 1);
       const inviteCode = await settlementService.createSettlementInviteLink({
         settlementId: currentSettlement.id,
         createdBy: user.uid,
         role: inviteRole,
         permissions: settlementService.getDefaultPermissions(inviteRole),
         isActive: true,
-        maxUses: 1 // Single use only
+        maxUses: parsedMax
       });
       
       // Set the real invite code returned from the service
@@ -682,19 +709,19 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'not_started': case 'pending': return 'bg-gray-100 text-gray-800';
-      case 'in_progress': return 'bg-blue-100 text-blue-800';
-      case 'completed': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'not_started': case 'pending': return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100';
+      case 'in_progress': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100';
+      case 'completed': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100';
+      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100';
     }
   };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'low': return 'bg-green-100 text-green-800';
-      case 'medium': return 'bg-yellow-100 text-yellow-800';
-      case 'high': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'low': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100';
+      case 'medium': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100';
+      case 'high': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100';
+      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100';
     }
   };
 
@@ -1459,6 +1486,25 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
                     🤝 Join Settlement
                   </button>
                   {currentSettlement && (
+                    <>
+                      <button
+                        onClick={() => {
+                          const newName = prompt('Enter new settlement name', currentSettlement.name);
+                          if (newName && newName.trim()) handleRenameSettlement(newName);
+                        }}
+                        className="px-3 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600 text-sm"
+                      >
+                        ✏️ Rename
+                      </button>
+                      <button
+                        onClick={handleDeleteSettlement}
+                        className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                      >
+                        🗑️ Delete
+                      </button>
+                    </>
+                  )}
+                  {currentSettlement && (
                     <button
                       onClick={handleCleanupDuplicates}
                       className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
@@ -1874,7 +1920,7 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 shadow-2xl max-w-md w-full mx-4">
             <h3 className="text-xl font-bold mb-4">Invite User to Settlement</h3>
-            <div className="space-y-4">
+              <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Role
@@ -1889,6 +1935,27 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
                   <option value="admin">Admin (Full management access)</option>
                 </select>
               </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Max Uses</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={inviteMaxUses}
+                      onChange={(e) => setInviteMaxUses(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="1"
+                      disabled={inviteNoExpiry}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">0 means unlimited uses</p>
+                  </div>
+                  <div className="flex items-end">
+                    <label className="inline-flex items-center space-x-2">
+                      <input type="checkbox" checked={inviteNoExpiry} onChange={(e) => setInviteNoExpiry(e.target.checked)} />
+                      <span className="text-sm text-gray-700">No max uses (unlimited)</span>
+                    </label>
+                  </div>
+                </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Invite Message (Optional)

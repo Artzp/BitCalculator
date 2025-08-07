@@ -19,6 +19,7 @@ interface SettlementInventoryV2Props {
 export const SettlementInventoryV2: React.FC<SettlementInventoryV2Props> = ({ onClose, currentSettlement }) => {
   const { user } = useAuth();
   const { items } = useItemsStore();
+  const [canEditInventory, setCanEditInventory] = useState<boolean>(false);
   
   // Remove the currentSettlement state since it's now passed as a prop
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
@@ -38,6 +39,18 @@ export const SettlementInventoryV2: React.FC<SettlementInventoryV2Props> = ({ on
       
       try {
         setLoading(true);
+        // Compute permissions: owner or any member with canEditInventory or role admin/co_owner
+        try {
+          const { SettlementV2Service } = await import('../services/settlementV2Service');
+          const svc = new SettlementV2Service();
+          const members = await svc.getSettlementMembers(currentSettlement.id);
+          const me = members.find(m => (m.collaboration?.userId || m.user?.id) === user.uid);
+          const isOwner = currentSettlement.ownerId === user.uid;
+          const role = me?.collaboration?.role;
+          const perm = me?.collaboration?.permissions;
+          const canEdit = !!(isOwner || perm?.canEditInventory || role === 'admin' || role === 'co_owner');
+          setCanEditInventory(canEdit);
+        } catch {}
         
         // Convert inventory object to array using the passed currentSettlement
         const inventoryArray = Object.entries(currentSettlement.inventory || {}).map(([itemId, item]: [string, any]) => ({
@@ -65,6 +78,7 @@ export const SettlementInventoryV2: React.FC<SettlementInventoryV2Props> = ({ on
 
   const handleAddItem = async () => {
     if (!selectedItemId || quantity <= 0 || !currentSettlement) return;
+    if (!canEditInventory) return;
     
     try {
       const item = items[selectedItemId];
@@ -251,8 +265,8 @@ export const SettlementInventoryV2: React.FC<SettlementInventoryV2Props> = ({ on
 
           <button
             onClick={handleAddItem}
-            disabled={!selectedItemId || quantity <= 0}
-            className="w-full bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:bg-gray-300"
+            disabled={!selectedItemId || quantity <= 0 || !canEditInventory}
+            className={`w-full px-4 py-2 rounded ${canEditInventory ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-gray-300 text-gray-600 cursor-not-allowed'}`}
           >
             Add to Inventory
           </button>
@@ -295,13 +309,15 @@ export const SettlementInventoryV2: React.FC<SettlementInventoryV2Props> = ({ on
                   <input
                     type="number"
                     value={inventoryItem.quantity}
-                    onChange={(e) => handleUpdateQuantity(inventoryItem.itemId, parseInt(e.target.value) || 0)}
+                    onChange={(e) => canEditInventory && handleUpdateQuantity(inventoryItem.itemId, parseInt(e.target.value) || 0)}
                     min="0"
-                    className="w-20 px-2 py-1 border border-gray-300 rounded text-sm"
+                    className={`w-20 px-2 py-1 border rounded text-sm ${canEditInventory ? 'border-gray-300' : 'border-gray-200 bg-gray-100 cursor-not-allowed'}`}
+                    disabled={!canEditInventory}
                   />
                   <button
                     onClick={() => handleRemoveItem(inventoryItem.itemId)}
-                    className="text-red-600 hover:text-red-800 px-2 py-1 text-sm"
+                    className={`px-2 py-1 text-sm ${canEditInventory ? 'text-red-600 hover:text-red-800' : 'text-gray-300 cursor-not-allowed'}`}
+                    disabled={!canEditInventory}
                   >
                     Remove
                   </button>

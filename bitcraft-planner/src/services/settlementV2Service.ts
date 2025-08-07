@@ -993,10 +993,12 @@ export class SettlementV2Service {
     const inviteCode = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
     const linkRef = collection(db, 'settlement_invite_links_v2');
     
-    // Set default maxUses to 1 for single-use functionality
-    const finalLinkData = {
+    // Set default maxUses to 1 for single-use functionality; treat 0 or negative as unlimited
+    const computedMaxUses =
+      typeof (linkData as any).maxUses === 'number' ? (linkData as any).maxUses : 1;
+    const finalLinkData: any = {
       ...linkData,
-      maxUses: linkData.maxUses || 1, // Default to single use
+      maxUses: computedMaxUses,
       inviteCode,
       currentUses: 0,
       createdAt: serverTimestamp()
@@ -1029,10 +1031,10 @@ export class SettlementV2Service {
         }
       }
       
-      // Check if invite has reached max uses
-      const maxUses = linkData.maxUses || 1; // Default to single use
+      // Check if invite has reached max uses (0 or negative means unlimited)
+      const maxUses = typeof linkData.maxUses === 'number' ? linkData.maxUses : 1;
       const currentUses = linkData.currentUses || 0;
-      if (currentUses >= maxUses) {
+      if (maxUses > 0 && currentUses >= maxUses) {
         return null; // Fully used
       }
       
@@ -1051,19 +1053,55 @@ export class SettlementV2Service {
     
     const linkData = linkDoc.data() as SettlementInviteLink;
     const newUseCount = (linkData.currentUses || 0) + 1;
-    const maxUses = linkData.maxUses || 1; // Default to single use
+    const maxUses = typeof linkData.maxUses === 'number' ? linkData.maxUses : 1; // Default single use; 0 = unlimited
     
     const updateData: any = {
       currentUses: newUseCount,
       lastUsedAt: serverTimestamp()
     };
     
-    // If we've reached max uses, deactivate the invite link
-    if (newUseCount >= maxUses) {
+    // If we've reached max uses, deactivate the invite link (only when maxUses > 0)
+    if (maxUses > 0 && newUseCount >= maxUses) {
       updateData.isActive = false;
     }
     
     await updateDoc(linkRef, updateData);
+  }
+
+  // Danger: Deletes a settlement and associated data (projects, tasks, collaborations, invite links)
+  async deleteSettlement(settlementId: string): Promise<void> {
+    const batch = writeBatch(db);
+    // Delete settlement document
+    const settlementRef = doc(db, 'settlements', settlementId);
+    batch.delete(settlementRef);
+
+    // Delete related projects
+    const projectsQuery = query(collection(db, 'projects'), where('settlementId', '==', settlementId));
+    const projectsSnap = await getDocs(projectsQuery);
+    const projectIds: string[] = [];
+    projectsSnap.forEach(d => {
+      batch.delete(d.ref);
+      projectIds.push(d.id);
+    });
+
+    // Delete tasks for each project (tasks_v2 collection)
+    for (const projectId of projectIds) {
+      const tasksQuery = query(collection(db, 'tasks_v2'), where('projectId', '==', projectId));
+      const tasksSnap = await getDocs(tasksQuery);
+      tasksSnap.forEach(t => batch.delete(t.ref));
+    }
+
+    // Delete collaborations
+    const collabQuery = query(collection(db, 'settlement_collaborations_v2'), where('settlementId', '==', settlementId));
+    const collabSnap = await getDocs(collabQuery);
+    collabSnap.forEach(c => batch.delete(c.ref));
+
+    // Delete invite links
+    const linksQuery = query(collection(db, 'settlement_invite_links_v2'), where('settlementId', '==', settlementId));
+    const linksSnap = await getDocs(linksQuery);
+    linksSnap.forEach(l => batch.delete(l.ref));
+
+    await batch.commit();
   }
 
   async getSettlementMembers(settlementId: string): Promise<SettlementMember[]> {

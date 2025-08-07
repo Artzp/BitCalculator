@@ -75,6 +75,22 @@ function App() {
   const [currentPage, setCurrentPage] = useState<'calculator' | 'settlement'>('calculator');
   const [isRestoring, setIsRestoring] = useState(false);
   const [isUserAdmin, setIsUserAdmin] = useState(false);
+  const [darkMode, setDarkMode] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('bc_dark_mode');
+      return saved ? JSON.parse(saved) : false;
+    } catch { return false; }
+  });
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (darkMode) {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+    try { localStorage.setItem('bc_dark_mode', JSON.stringify(darkMode)); } catch {}
+  }, [darkMode]);
   
   // Make setIsRestoring available for DatabaseDebugger (development only)
   useEffect(() => {
@@ -556,8 +572,17 @@ function App() {
   }
 
   return (
-    <div className="App bg-gray-100 min-h-screen">
-      <AuthHeader />
+    <div className={`App min-h-screen ${darkMode ? 'bg-gray-900 text-gray-100' : 'bg-gray-100 text-gray-900'}`}>
+      <div className="flex items-center justify-between px-4 pt-4">
+        <AuthHeader />
+        <button
+          onClick={() => setDarkMode(v => !v)}
+          className={`px-3 py-1 rounded text-sm border ${darkMode ? 'bg-gray-800 border-gray-700 hover:bg-gray-700' : 'bg-white border-gray-300 hover:bg-gray-50'}`}
+          title="Toggle dark mode"
+        >
+          {darkMode ? '🌙 Dark' : '☀️ Light'}
+        </button>
+      </div>
       <SaveStatusIndicator saveStatus={saveStatus} />
       
       <div className="w-full px-4 py-4">
