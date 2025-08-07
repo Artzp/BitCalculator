@@ -129,9 +129,20 @@ const InventoryInput: React.FC = () => {
           {Object.keys(inventory).length > 0 && (
             <button
               onClick={() => {
-                if (window.confirm('Are you sure you want to clear your entire inventory?')) {
-                  Object.keys(inventory).forEach(id => removeInventoryItem(id));
+                // Inline two-step confirmation without blocking dialog
+                const confirmed = (document.activeElement as HTMLElement)?.dataset?.confirm === 'true';
+                if (!confirmed) {
+                  (document.activeElement as HTMLElement).dataset.confirm = 'true';
+                  (document.activeElement as HTMLElement).textContent = 'Confirm Clear All';
+                  setTimeout(() => {
+                    if (document.activeElement) {
+                      (document.activeElement as HTMLElement).removeAttribute('data-confirm');
+                      (document.activeElement as HTMLElement).textContent = 'Clear All';
+                    }
+                  }, 3000);
+                  return;
                 }
+                Object.keys(inventory).forEach(id => removeInventoryItem(id));
               }}
               className="text-xs text-red-400 hover:text-red-300 px-2 py-1 rounded border border-red-400/30 hover:border-red-300/50 transition-colors"
             >

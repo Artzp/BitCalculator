@@ -23,5 +23,9 @@
   },
   "include": [
     "src"
+  ],
+  "exclude": [
+    "src/**/*.bak",
+    "src/**/*.todo"
   ]
 } 

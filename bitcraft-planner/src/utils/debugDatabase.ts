@@ -1104,17 +1104,10 @@ export const immediateEmergencyRecovery = async () => {
 };
 
 // Make emergency recovery globally available
-if (typeof window !== 'undefined') {
+if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
   (window as any).emergencyProjectRecovery = quickProjectRecovery;
   (window as any).adminProjectRecovery = adminProjectRecovery;
   (window as any).immediateEmergencyRecovery = immediateEmergencyRecovery;
-  
-  // Only log availability in development
-  if (process.env.NODE_ENV === 'development') {
-    console.log('🚨 Emergency Recovery Functions Available:');
-    console.log('📱 For regular users: emergencyProjectRecovery()');
-    console.log('⚡ For immediate recovery: immediateEmergencyRecovery()');
-    console.log('🔑 For admins: adminProjectRecovery()');
-    console.log('💡 These functions can be called directly from browser console if needed');
-  }
-} 
+  // eslint-disable-next-line no-console
+  console.log('🚨 Emergency Recovery functions available on window (dev only)');
+}

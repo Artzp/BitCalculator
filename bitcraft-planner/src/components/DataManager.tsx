@@ -14,6 +14,7 @@ export const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose }) => 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [confirmingClear, setConfirmingClear] = useState(false);
 
   const handleSaveData = async () => {
     if (!user) return;
@@ -99,11 +100,17 @@ export const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose }) => 
   };
 
   const handleClearData = () => {
-    if (window.confirm('Are you sure you want to clear all data? This cannot be undone.')) {
-      setInventory({});
-      setBuildList([]);
-      setMessage({ type: 'success', text: 'Data cleared successfully!' });
+    if (!confirmingClear) {
+      setConfirmingClear(true);
+      setMessage({ type: 'error', text: 'Click "Clear All Data" again to confirm. This cannot be undone.' });
+      // Auto-cancel confirmation after a short timeout
+      setTimeout(() => setConfirmingClear(false), 4000);
+      return;
     }
+    setInventory({});
+    setBuildList([]);
+    setMessage({ type: 'success', text: 'Data cleared successfully!' });
+    setConfirmingClear(false);
   };
 
   const testDatabase = async () => {
@@ -111,21 +118,16 @@ export const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose }) => 
     
     try {
       setIsLoading(true);
-      console.log('🧪 Testing database connection...');
-      
       // Use the new robust connectivity test
       const result = await firebaseService.testDatabaseConnectivity(user.uid);
       
       if (result.success) {
-        console.log('✅ Database connectivity test successful');
-        alert('✅ Database connection successful!\n\n' + result.message + '\n\nCheck the browser console for details.');
+        setMessage({ type: 'success', text: `✅ Database connection successful: ${result.message}` });
       } else {
-        console.error('❌ Database connectivity test failed:', result.message);
-        alert('❌ Database test failed:\n\n' + result.message);
+        setMessage({ type: 'error', text: `❌ Database test failed: ${result.message}` });
       }
     } catch (error) {
-      console.error('❌ Database test failed:', error);
-      alert('❌ Database test failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      setMessage({ type: 'error', text: `❌ Database test failed: ${error instanceof Error ? error.message : 'Unknown error'}` });
     } finally {
       setIsLoading(false);
     }
@@ -207,9 +209,9 @@ export const DataManager: React.FC<DataManagerProps> = ({ isOpen, onClose }) => 
             <h3 className="font-semibold text-gray-700 mb-3">Danger Zone</h3>
             <button
               onClick={handleClearData}
-              className="w-full bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700"
+              className={`w-full ${confirmingClear ? 'bg-red-700' : 'bg-red-600'} text-white py-2 px-4 rounded-md hover:bg-red-700`}
             >
-              Clear All Data
+              {confirmingClear ? 'Click to Confirm: Clear All Data' : 'Clear All Data'}
             </button>
           </div>
 

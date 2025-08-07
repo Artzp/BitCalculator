@@ -76,12 +76,14 @@ function App() {
   const [isRestoring, setIsRestoring] = useState(false);
   const [isUserAdmin, setIsUserAdmin] = useState(false);
   
-  // Make setIsRestoring available globally for DatabaseDebugger
+  // Make setIsRestoring available for DatabaseDebugger (development only)
   useEffect(() => {
-    (window as any).__setIsRestoring = setIsRestoring;
-    return () => {
-      delete (window as any).__setIsRestoring;
-    };
+    if (process.env.NODE_ENV === 'development') {
+      (window as any).__setIsRestoring = setIsRestoring;
+      return () => {
+        delete (window as any).__setIsRestoring;
+      };
+    }
   }, []);
 
   const handleTabChange = (tab: 'calculator' | 'settlement') => {

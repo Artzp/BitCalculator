@@ -954,12 +954,12 @@ export class SettlementV2Service {
   async removeSettlementCollaborator(userId: string, settlementId: string): Promise<void> {
     console.log('DEBUG removeSettlementCollaborator called with:', { userId, settlementId });
     
-    if (!userId || userId === 'undefined') {
-      throw new Error(`Invalid userId: ${userId}`);
+    if (!userId || userId === 'undefined' || userId === (undefined as unknown as string)) {
+      throw new Error('Invalid userId');
     }
     
-    if (!settlementId || settlementId === 'undefined') {
-      throw new Error(`Invalid settlementId: ${settlementId}`);
+    if (!settlementId || settlementId === 'undefined' || settlementId === (undefined as unknown as string)) {
+      throw new Error('Invalid settlementId');
     }
     
     const collaborationId = `${userId}_${settlementId}`;

@@ -28,7 +28,18 @@ export const resolveRecipeWithInventoryPruning = (
   const item = items[targetItemId];
 
   if (!item) {
-    throw new Error(`Item with ID ${targetItemId} not found.`);
+    return {
+      itemId: targetItemId,
+      itemName: 'Unknown Item',
+      quantity: targetQuantity,
+      available: 0,
+      needed: targetQuantity,
+      craft: false,
+      status: 'missing',
+      children: [],
+      recipeIndex,
+      totalMaterialsFlat: []
+    };
   }
 
   if (visited.has(targetItemId)) {

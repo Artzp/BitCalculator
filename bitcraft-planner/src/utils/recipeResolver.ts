@@ -42,7 +42,18 @@ export class RecipeResolver {
     
     const targetItem = this.items[targetItemId];
     if (!targetItem) {
-      throw new Error(`Item with ID ${targetItemId} not found`);
+      return {
+        itemId: targetItemId,
+        itemName: 'Unknown Item',
+        quantity: targetQuantity,
+        available: this.getInventoryQuantity(targetItemId),
+        needed: targetQuantity,
+        craft: false,
+        status: 'missing',
+        children: [],
+        recipeIndex: 0,
+        totalMaterialsFlat: []
+      };
     }
 
     const result = this.resolveItem(targetItemId, targetQuantity, recipeIndex, 0, maxDepth);

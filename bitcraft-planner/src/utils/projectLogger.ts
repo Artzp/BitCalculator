@@ -314,7 +314,9 @@ class ProjectLogger {
 // Create singleton instance
 export const projectLogger = new ProjectLogger();
 
-// Make it globally available for debugging
-(window as any).__projectLogger = projectLogger;
-
-console.log('🔍 Project Logger initialized - Access via window.__projectLogger'); 
+// Expose in development only
+if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+  (window as any).__projectLogger = projectLogger;
+  // eslint-disable-next-line no-console
+  console.log('🔍 Project Logger initialized - Access via window.__projectLogger');
+}
