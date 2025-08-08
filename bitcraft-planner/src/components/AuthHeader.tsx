@@ -6,7 +6,13 @@ import { UserProfile } from './UserProfile';
 import { SettlementV2Service } from '../services/settlementV2Service';
 import { getAuthUserDisplayName } from '../utils/userUtils';
 
-export const AuthHeader: React.FC = () => {
+type AuthHeaderProps = {
+  darkMode?: boolean;
+  onToggleDarkMode?: () => void;
+  rightExtra?: React.ReactNode;
+};
+
+export const AuthHeader: React.FC<AuthHeaderProps> = ({ darkMode, onToggleDarkMode, rightExtra }) => {
   const { user, logout } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showDataManager, setShowDataManager] = useState(false);
@@ -59,90 +65,108 @@ export const AuthHeader: React.FC = () => {
   };
 
   return (
-    <div className="flex items-center justify-between mb-6">
-      <h1 className="text-5xl font-bold text-blue-600">
-        BitCraft Calculator
-      </h1>
-      
-      <div className="flex items-center space-x-4">
-        {/* Discord Support Button - Always visible */}
-        <button
-          onClick={handleDiscordClick}
-          className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors flex items-center space-x-2"
-          title="Join our Discord community for support, bug reports, feature requests, and discussions"
-        >
-          <span>💬</span>
-          <span>Discord Support</span>
-        </button>
-
-        {user ? (
-          <div className="flex items-center space-x-4">
-            <div className="text-sm text-gray-600">
-              <div>Welcome, <span className="font-semibold">{userProfileData?.username || userProfileData?.customDisplayName || user.displayName || user.email || 'User'}</span></div>
-              {userProfileData?.username && (
-                <div className="text-xs text-gray-500">{user.email}</div>
-              )}
+    <header className="bc-toolbar shadow-[0_1px_0_0_rgba(0,0,0,0.04)]">
+      <div className="bc-container">
+        <div className="flex items-center justify-between py-2.5">
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 rounded-lg bg-brand-600 text-white grid place-items-center shadow-soft text-sm">BC</div>
+            <div>
+              <div className="text-base font-semibold">BitCraft Calculator</div>
+              <div className="text-[11px] text-gray-500 dark:text-gray-400">Planning and collaboration</div>
             </div>
-            <div className="text-xs text-gray-500 mt-1">
-              {user.emailVerified ? '✅ Verified' : '⚠️ Unverified'} • 
-              {user.providerData[0]?.providerId === 'google.com' ? '📧 Google' : '🔐 Email'}
-            </div>
-            <button
-              onClick={() => setShowUserProfile(true)}
-              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
-              title="Edit your profile and username"
-            >
-              👤 Profile
-            </button>
-            <button
-              onClick={() => setShowDataManager(true)}
-              className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
-              title="Manage your saved data"
-            >
-              💾 Data
-            </button>
-            <button
-              onClick={handleLogout}
-              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
-            >
-              Sign Out
-            </button>
           </div>
-        ) : (
-          <button
-            onClick={() => setShowAuthModal(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-          >
-            Sign In
-          </button>
-        )}
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleDiscordClick}
+              className="bc-btn-secondary"
+              title="Join our Discord community for support, bug reports, feature requests, and discussions"
+            >
+              <span>💬</span>
+              <span className="hidden sm:inline">Discord</span>
+            </button>
+
+            {typeof onToggleDarkMode === 'function' && (
+              <button onClick={onToggleDarkMode} className="bc-btn-secondary" title="Toggle theme">
+                {darkMode ? '🌙' : '☀️'}
+                <span className="hidden sm:inline">Theme</span>
+              </button>
+            )}
+
+            {rightExtra}
+
+            {user ? (
+              <div className="flex items-center gap-2">
+                <div className="hidden md:block text-right mr-1">
+                  <div className="text-sm">
+                    {userProfileData?.username || userProfileData?.customDisplayName || user.displayName || user.email || 'User'}
+                  </div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    {user.emailVerified ? 'Verified' : 'Unverified'} • {user.providerData[0]?.providerId === 'google.com' ? 'Google' : 'Email'}
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowUserProfile(true)}
+                  className="bc-btn-secondary"
+                  title="Edit your profile and username"
+                >
+                  👤
+                  <span className="hidden sm:inline">Profile</span>
+                </button>
+                <button
+                  onClick={() => setShowDataManager(true)}
+                  className="bc-btn-secondary"
+                  title="Manage your saved data"
+                >
+                  💾
+                  <span className="hidden sm:inline">Data</span>
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="bc-btn-primary"
+                >
+                  Sign Out
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowAuthModal(true)}
+                className="bc-btn-primary"
+              >
+                Sign In
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
-      <AuthModal 
-        isOpen={showAuthModal} 
-        onClose={() => setShowAuthModal(false)} 
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
       />
-      
-      <DataManager 
-        isOpen={showDataManager} 
-        onClose={() => setShowDataManager(false)} 
+
+      <DataManager
+        isOpen={showDataManager}
+        onClose={() => setShowDataManager(false)}
       />
-      
-      <UserProfile 
-        isOpen={showUserProfile} 
-        onClose={() => setShowUserProfile(false)} 
+
+      <UserProfile
+        isOpen={showUserProfile}
+        onClose={() => setShowUserProfile(false)}
         onUserProfileUpdated={() => {
-          // Reload user profile when updated
           if (user) {
             const settlementService = new SettlementV2Service();
-            settlementService.getUser(user.uid).then(profile => {
-              setUserProfileData(profile);
-            }).catch(error => {
-              console.error('Failed to reload user profile:', error);
-            });
+            settlementService
+              .getUser(user.uid)
+              .then((profile) => {
+                setUserProfileData(profile);
+              })
+              .catch((error) => {
+                console.error('Failed to reload user profile:', error);
+              });
           }
         }}
       />
-    </div>
+    </header>
   );
 }; 

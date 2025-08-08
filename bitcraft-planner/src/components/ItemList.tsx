@@ -134,7 +134,7 @@ const ItemList: React.FC<ItemListProps> = ({ showAddToBuilds = false }) => {
       </div>
 
       {/* Enhanced Item List */}
-      <div className="flex-1 overflow-y-auto p-3 min-h-0">
+      <div className="flex-1 overflow-y-auto p-2 min-h-0">
         {displayedItems.length === 0 ? (
           <div className="text-center py-12 text-slate-400">
             <div className="text-4xl mb-3">🔍</div>
@@ -142,7 +142,7 @@ const ItemList: React.FC<ItemListProps> = ({ showAddToBuilds = false }) => {
             <p className="text-sm mt-1">Try adjusting your filters</p>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {displayedItems.map(([id, item]) => (
               <EnhancedItemRow
                 key={id}
@@ -206,13 +206,13 @@ const EnhancedItemRow = ({ id, item, addQuantities, updateQuantity, handleAddToB
   };
 
   return (
-    <div className={`group relative p-3 rounded-xl border transition-all duration-200 hover:shadow-lg ${
+    <div className={`group relative p-2.5 rounded-lg border transition-all duration-150 hover:shadow-soft ${
       canCraft 
-        ? 'bg-slate-700/30 border-slate-600/50 hover:border-slate-500/70 hover:bg-slate-700/50' 
+        ? 'bg-slate-700/30 border-slate-600/50 hover:border-slate-500/70 hover:bg-slate-700/40' 
         : 'bg-slate-800/30 border-slate-700/50 hover:border-slate-600/70'
     }`}>
       <div className="flex items-center justify-between">
-        <div className="flex-1 min-w-0 flex items-center gap-3">
+        <div className="flex-1 min-w-0 flex items-center gap-2.5">
           {/* Item Icon */}
           <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-slate-600/50 flex items-center justify-center">
             <span className="text-lg">{canCraft ? '🔨' : '🌿'}</span>
@@ -220,15 +220,15 @@ const EnhancedItemRow = ({ id, item, addQuantities, updateQuantity, handleAddToB
           
           {/* Item Info */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <h3 className="font-semibold text-white truncate">{item.name}</h3>
+            <div className="flex items-center gap-2 mb-0.5">
+              <h3 className="font-medium text-white truncate text-sm">{item.name}</h3>
               {!canCraft && (
-                <span className="px-2 py-0.5 bg-amber-500/20 text-amber-300 text-xs rounded-full border border-amber-500/30">
+                <span className="px-1.5 py-0.5 bg-amber-500/20 text-amber-300 text-[10px] rounded-full border border-amber-500/30">
                   Resource
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-3 text-xs">
+            <div className="flex items-center gap-2.5 text-[11px]">
               <div className="flex items-center gap-1">
                 <span>{getTierIcon(item.tier)}</span>
                 <span className="text-slate-400">Tier {item.tier}</span>
@@ -252,11 +252,11 @@ const EnhancedItemRow = ({ id, item, addQuantities, updateQuantity, handleAddToB
           <div className="flex-shrink-0 ml-4 flex items-center gap-2">
             {canCraft ? (
               <>
-                <div className="flex items-center bg-slate-600/50 rounded-lg">
+                <div className="flex items-center bg-slate-600/50 rounded-md">
                   <button
                     onClick={() => updateQuantity(id, quantity - 1)}
                     disabled={quantity <= 1}
-                    className="p-2 hover:bg-slate-500/50 rounded-l-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="px-2 py-1.5 hover:bg-slate-500/50 rounded-l-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
@@ -267,12 +267,12 @@ const EnhancedItemRow = ({ id, item, addQuantities, updateQuantity, handleAddToB
                     min="1"
                     value={quantity}
                     onChange={(e) => updateQuantity(id, parseInt(e.target.value) || 1)}
-                    className="w-16 px-2 py-2 text-center bg-transparent border-0 focus:outline-none text-white"
+                    className="w-14 px-2 py-1.5 text-center bg-transparent border-0 focus:outline-none text-white text-sm"
                     onClick={(e) => e.stopPropagation()}
                   />
                   <button
                     onClick={() => updateQuantity(id, quantity + 1)}
-                    className="p-2 hover:bg-slate-500/50 rounded-r-lg transition-colors"
+                    className="px-2 py-1.5 hover:bg-slate-500/50 rounded-r-md transition-colors"
                   >
                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -281,7 +281,7 @@ const EnhancedItemRow = ({ id, item, addQuantities, updateQuantity, handleAddToB
                 </div>
                 <button
                   onClick={() => handleAddToBuild(id)}
-                  className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-sm font-semibold rounded-lg hover:from-blue-600 hover:to-purple-600 transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105"
+                  className="px-3 py-1.5 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs font-semibold rounded-md hover:from-blue-600 hover:to-purple-600 transition-colors"
                 >
                   Add
                 </button>
@@ -296,8 +296,8 @@ const EnhancedItemRow = ({ id, item, addQuantities, updateQuantity, handleAddToB
         )}
       </div>
 
-      {/* Hover Effect */}
-      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none rounded-xl"></div>
+      {/* Hover/Focus Effect */}
+      <div className="absolute inset-0 ring-1 ring-transparent group-hover:ring-white/10 group-focus-within:ring-brand-500/40 rounded-lg"></div>
     </div>
   );
 };

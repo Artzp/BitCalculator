@@ -6,30 +6,41 @@ interface TabsProps {
 }
 
 export const Tabs: React.FC<TabsProps> = ({ activeTab, onTabClick }) => {
+  const baseBtn =
+    'relative px-3 py-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500/40 rounded-md';
+  const inactive =
+    'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100';
+  const active =
+    'text-gray-900 dark:text-white';
+
   return (
-    <div className="flex justify-center my-4">
-      <div className="flex space-x-1 bg-gray-200 p-1 rounded-lg">
+    <nav className="w-full">
+      <div className="flex items-center gap-2">
         <button
           onClick={() => onTabClick('calculator')}
-          className={`px-4 py-2 text-sm font-medium rounded-md ${
-            activeTab === 'calculator'
-              ? 'bg-white text-gray-800 shadow'
-              : 'text-gray-600 hover:bg-gray-300'
-          }`}
+          className={`${baseBtn} ${activeTab === 'calculator' ? active : inactive}`}
+          aria-current={activeTab === 'calculator' ? 'page' : undefined}
         >
           Bit Calculator
+          <span
+            className={`absolute left-0 right-0 -bottom-2 h-0.5 rounded-full transition-opacity ${
+              activeTab === 'calculator' ? 'bg-brand-600 dark:bg-brand-400 opacity-100' : 'opacity-0'
+            }`}
+          />
         </button>
         <button
           onClick={() => onTabClick('settlement')}
-          className={`px-4 py-2 text-sm font-medium rounded-md ${
-            activeTab === 'settlement'
-              ? 'bg-white text-gray-800 shadow'
-              : 'text-gray-600 hover:bg-gray-300'
-          }`}
+          className={`${baseBtn} ${activeTab === 'settlement' ? active : inactive}`}
+          aria-current={activeTab === 'settlement' ? 'page' : undefined}
         >
           Settlement System
+          <span
+            className={`absolute left-0 right-0 -bottom-2 h-0.5 rounded-full transition-opacity ${
+              activeTab === 'settlement' ? 'bg-brand-600 dark:bg-brand-400 opacity-100' : 'opacity-0'
+            }`}
+          />
         </button>
       </div>
-    </div>
+    </nav>
   );
 };

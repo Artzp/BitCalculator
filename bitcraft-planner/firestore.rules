@@ -346,7 +346,14 @@ service cloud.firestore {
     function hasSettlementWriteAccess(settlementId) {
       return exists(/databases/$(database)/documents/settlement_collaborations_v2/$(request.auth.uid + '_' + settlementId))
         && get(/databases/$(database)/documents/settlement_collaborations_v2/$(request.auth.uid + '_' + settlementId)).data.status == 'active'
-        && get(/databases/$(database)/documents/settlement_collaborations_v2/$(request.auth.uid + '_' + settlementId)).data.role in ['Owner', 'Co-Owner', 'Admin', 'Contributor'];
+        && (
+          // Accept both explicit permission flag and role names (supporting both cases and kebab/underscore variants)
+          get(/databases/$(database)/documents/settlement_collaborations_v2/$(request.auth.uid + '_' + settlementId)).data.permissions.canEditInventory == true ||
+          get(/databases/$(database)/documents/settlement_collaborations_v2/$(request.auth.uid + '_' + settlementId)).data.role in [
+            'Owner', 'Co-Owner', 'Admin', 'Contributor',
+            'owner', 'co_owner', 'admin', 'contributor'
+          ]
+        );
     }
     
     // Helper function to check if user is the owner of a settlement

@@ -44,7 +44,7 @@ const BuildList: React.FC = () => {
       </div>
 
       {/* Build Items */}
-      <div className="flex-1 space-y-2 pr-1 min-h-0 overflow-y-auto">
+      <div className="flex-1 space-y-1.5 pr-1 min-h-0 overflow-y-auto">
         {buildList.map((buildItem, index) => {
           const item = items[buildItem.itemId];
           if (!item) return null;
@@ -132,20 +132,20 @@ const BuildQueueItem = ({ buildItem, item, rarityColor, rarityName, onUpdateQuan
   };
 
   return (
-    <div className="group relative bg-slate-700/30 hover:bg-slate-700/50 border border-slate-600/50 hover:border-slate-500/70 rounded-xl p-3 transition-all duration-200">
+    <div className="group relative bg-slate-700/30 hover:bg-slate-700/45 border border-slate-600/50 hover:border-slate-500/70 rounded-lg p-2.5 transition-all duration-150">
       <div className="flex items-center justify-between">
-        <div className="flex-1 min-w-0 flex items-center gap-3">
+          <div className="flex-1 min-w-0 flex items-center gap-2.5">
           {/* Item Icon */}
           <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-slate-600/50 flex items-center justify-center">
             <span className="text-lg">🔨</span>
           </div>
           
           {/* Item Info */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <h3 className="font-semibold text-white truncate">{item.name}</h3>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-0.5">
+                <h3 className="font-medium text-white truncate text-sm">{item.name}</h3>
             </div>
-            <div className="flex items-center gap-3 text-xs">
+              <div className="flex items-center gap-2.5 text-[11px]">
               <div className="flex items-center gap-1">
                 <span>{getTierIcon(item.tier)}</span>
                 <span className="text-slate-400">T{item.tier}</span>
@@ -174,7 +174,7 @@ const BuildQueueItem = ({ buildItem, item, rarityColor, rarityName, onUpdateQuan
                     setIsEditing(false);
                   }
                 }}
-                className="w-16 px-2 py-1 text-center bg-slate-600 border border-slate-500 rounded-md text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-14 px-2 py-1 text-center bg-slate-600 border border-slate-500 rounded-md text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 autoFocus
                 onBlur={handleQuantitySubmit}
               />
@@ -185,7 +185,7 @@ const BuildQueueItem = ({ buildItem, item, rarityColor, rarityName, onUpdateQuan
                 setTempQuantity(buildItem.quantity);
                 setIsEditing(true);
               }}
-              className="px-3 py-1.5 bg-slate-600/50 hover:bg-slate-500/50 rounded-lg transition-colors"
+              className="px-3 py-1.5 bg-slate-600/50 hover:bg-slate-500/50 rounded-md transition-colors"
             >
               <span className="text-white font-medium">{buildItem.quantity}</span>
             </button>
@@ -201,8 +201,8 @@ const BuildQueueItem = ({ buildItem, item, rarityColor, rarityName, onUpdateQuan
         </div>
       </div>
 
-      {/* Hover Effect */}
-      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none rounded-xl"></div>
+      {/* Hover/Focus Effect */}
+      <div className="absolute inset-0 ring-1 ring-transparent group-hover:ring-white/10 group-focus-within:ring-brand-500/40 rounded-lg"></div>
     </div>
   );
 };

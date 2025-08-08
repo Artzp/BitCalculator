@@ -81,6 +81,12 @@ function App() {
       return saved ? JSON.parse(saved) : false;
     } catch { return false; }
   });
+  const [useModernUI, setUseModernUI] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('bc_ui_modern');
+      return saved ? JSON.parse(saved) : false; // default Classic
+    } catch { return false; }
+  });
 
   useEffect(() => {
     const root = document.documentElement;
@@ -91,6 +97,10 @@ function App() {
     }
     try { localStorage.setItem('bc_dark_mode', JSON.stringify(darkMode)); } catch {}
   }, [darkMode]);
+
+  useEffect(() => {
+    try { localStorage.setItem('bc_ui_modern', JSON.stringify(useModernUI)); } catch {}
+  }, [useModernUI]);
   
   // Make setIsRestoring available for DatabaseDebugger (development only)
   useEffect(() => {
@@ -560,7 +570,7 @@ function App() {
 
   if (authLoading || isLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 text-slate-800 flex items-center justify-center">
+      <div className="min-h-screen app-surface bg-gray-50 text-slate-800 dark:bg-gray-950 dark:text-gray-100 flex items-center justify-center">
         <div className="text-center">
           <div className="text-2xl font-semibold mb-4">
             {authLoading ? 'Loading...' : 'Loading BitCraft items...'}
@@ -572,28 +582,51 @@ function App() {
   }
 
   return (
-    <div className={`App min-h-screen ${darkMode ? 'bg-gray-900 text-gray-100' : 'bg-gray-100 text-gray-900'}`}>
-      <div className="flex items-center justify-between px-4 pt-4">
-        <AuthHeader />
-        <button
-          onClick={() => setDarkMode(v => !v)}
-          className={`px-3 py-1 rounded text-sm border ${darkMode ? 'bg-gray-800 border-gray-700 hover:bg-gray-700' : 'bg-white border-gray-300 hover:bg-gray-50'}`}
-          title="Toggle dark mode"
-        >
-          {darkMode ? '🌙 Dark' : '☀️ Light'}
-        </button>
-      </div>
-      <SaveStatusIndicator saveStatus={saveStatus} />
-      
-      <div className="w-full px-4 py-4">
-        <Tabs activeTab={currentPage} onTabClick={handleTabChange} />
-        {currentPage === 'calculator' && (
-          <BitCalculatorPage />
+    <div className={`App min-h-screen ${useModernUI ? 'app-surface bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100' : (darkMode ? 'bg-gray-900 text-gray-100' : 'bg-gray-100 text-gray-900')}`}>
+      <AuthHeader
+        darkMode={darkMode}
+        onToggleDarkMode={() => setDarkMode(v => !v)}
+        rightExtra={(
+          <button
+            onClick={() => setUseModernUI(v => !v)}
+            className="bc-btn-secondary"
+            title="Toggle between Classic and Modern UI"
+          >
+            {useModernUI ? 'Classic' : 'Modern'}
+          </button>
         )}
-        {currentPage === 'settlement' && (
-          <SettlementPage />
-        )}
-      </div>
+      />
+
+      {useModernUI ? (
+        <div className="bc-container">
+          <div className="py-4 animate-fade-in">
+            <SaveStatusIndicator saveStatus={saveStatus} />
+          </div>
+          <div className="py-4">
+            <div className="bc-card">
+              <div className="bc-card-header">
+                <Tabs activeTab={currentPage} onTabClick={handleTabChange} />
+              </div>
+              <div className="bc-card-body">
+                {currentPage === 'calculator' && <BitCalculatorPage />}
+                {currentPage === 'settlement' && <SettlementPage />}
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="flex items-center justify-between px-4 pt-4">
+            {/* Classic: header already rendered above; only keep spacing consistent */}
+          </div>
+          <SaveStatusIndicator saveStatus={saveStatus} />
+          <div className="w-full px-4 py-4">
+            <Tabs activeTab={currentPage} onTabClick={handleTabChange} />
+            {currentPage === 'calculator' && <BitCalculatorPage />}
+            {currentPage === 'settlement' && <SettlementPage />}
+          </div>
+        </>
+      )}
     </div>
   );
 }
