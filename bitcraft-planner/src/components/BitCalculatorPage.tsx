@@ -17,17 +17,9 @@ const BitCalculatorPage: React.FC = () => {
   const hasItems = buildList.length > 0;
 
   return (
-    <div className="flex-grow flex flex-col h-[calc(100vh-120px)] bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 relative overflow-hidden">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-5 pointer-events-none">
-        <div className="absolute inset-0" style={{
-          backgroundImage: `radial-gradient(circle at 25% 25%, #3b82f6 0%, transparent 50%), 
-                           radial-gradient(circle at 75% 75%, #8b5cf6 0%, transparent 50%)`,
-          backgroundSize: '100px 100px'
-        }}></div>
-      </div>
+    <div className="flex-grow flex flex-col h-[calc(100vh-120px)] relative overflow-hidden">
       {/* Mobile Navigation */}
-      <div className="md:hidden bg-slate-800/90 backdrop-blur-sm border-b border-slate-700 p-3 flex-shrink-0">
+      <div className="md:hidden bg-white/90 dark:bg-gray-900/80 backdrop-blur-sm border-b border-gray-200/60 dark:border-gray-700/50 p-3 flex-shrink-0">
         <div className="flex gap-2">
           <MobileNavButton 
             active={mobileView === 'catalog'} 
@@ -63,14 +55,14 @@ const BitCalculatorPage: React.FC = () => {
           {catalogCollapsed ? (
             <CollapsedCatalog onExpand={() => setCatalogCollapsed(false)} />
           ) : (
-            <div className="bg-slate-800/60 backdrop-blur-sm rounded-xl border border-slate-700/50 flex-1 flex flex-col shadow-xl min-h-0">
-              <div className="p-4 border-b border-slate-700/50 flex items-center justify-between flex-shrink-0">
-                <h2 className="text-lg font-bold text-white flex items-center gap-2">
+            <div className="bc-card flex-1 flex flex-col shadow-soft min-h-0">
+              <div className="p-4 border-b border-gray-200/60 dark:border-gray-700/50 flex items-center justify-between flex-shrink-0">
+                <h2 className="text-lg font-bold flex items-center gap-2">
                   📚 Item Catalog
                 </h2>
                 <button
                   onClick={() => setCatalogCollapsed(true)}
-                  className="hidden md:flex p-2 text-slate-400 hover:text-white hover:bg-slate-700/50 rounded-lg transition-all"
+                  className="hidden md:flex p-2 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded-lg transition-all"
                   title="Collapse catalog"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -89,10 +81,10 @@ const BitCalculatorPage: React.FC = () => {
         <div className={`flex flex-col h-full transition-all duration-300 min-h-0 ${
           catalogCollapsed ? 'w-full md:w-[400px] lg:w-[420px] xl:w-[480px]' : 'w-full md:w-[350px] lg:w-96 xl:w-[400px]'
         } ${mobileView !== 'queue' ? 'hidden md:flex' : 'flex'}`}>
-          <div className="bg-slate-800/60 backdrop-blur-sm rounded-xl border border-slate-700/50 flex-1 flex flex-col shadow-xl min-h-0">
-            <div className="p-4 border-b border-slate-700/50 flex-shrink-0">
+          <div className="bc-card flex-1 flex flex-col shadow-soft min-h-0">
+            <div className="p-4 border-b border-gray-200/60 dark:border-gray-700/50 flex-shrink-0">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                <h2 className="text-lg font-bold flex items-center gap-2">
                   🔨 Build Queue
                   {buildList.length > 0 && (
                     <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full font-medium">
@@ -101,7 +93,7 @@ const BitCalculatorPage: React.FC = () => {
                   )}
                 </h2>
                 {buildList.length > 0 && (
-                  <div className="text-xs text-slate-400">
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
                     {buildList.reduce((sum, item) => sum + item.quantity, 0)} total items
                   </div>
                 )}
@@ -109,10 +101,10 @@ const BitCalculatorPage: React.FC = () => {
             </div>
             <div className="flex-1 min-h-0 overflow-hidden">
               {buildList.length === 0 ? (
-                <div className="flex items-center justify-center h-full text-center text-slate-400 p-6">
+                <div className="flex items-center justify-center h-full text-center text-gray-500 dark:text-gray-400 p-6">
                   <div>
                     <div className="text-4xl mb-3">🎯</div>
-                    <p className="font-semibold text-lg">Queue is empty</p>
+                    <p className="font-semibold text-lg text-gray-900 dark:text-gray-100">Queue is empty</p>
                     <p className="text-sm mt-1">Add items from the catalog</p>
                   </div>
                 </div>
@@ -129,9 +121,9 @@ const BitCalculatorPage: React.FC = () => {
         <div className={`flex-1 flex flex-col h-full min-w-0 min-h-0 ${
           mobileView !== 'results' ? 'hidden md:flex' : 'flex'
         }`}>
-          <div className="bg-slate-800/60 backdrop-blur-sm rounded-xl border border-slate-700/50 flex-1 flex flex-col shadow-xl min-h-0">
+          <div className="bc-card flex-1 flex flex-col shadow-soft min-h-0">
             {/* Enhanced Tabs */}
-            <div className="flex border-b border-slate-700/50 bg-slate-900/50 flex-shrink-0">
+            <div className="flex border-b border-gray-200/60 dark:border-gray-700/50 bg-gray-50 dark:bg-gray-900/50 flex-shrink-0">
               <TabButton 
                 title="Summary" 
                 activeTab={activeTab} 
@@ -190,8 +182,8 @@ const MobileNavButton = ({ active, onClick, icon, label, badge }: {
     onClick={onClick}
     className={`flex-1 flex flex-col items-center gap-1 p-3 rounded-lg transition-all relative ${
       active 
-        ? 'bg-blue-500 text-white shadow-lg' 
-        : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700 hover:text-white'
+        ? 'bg-brand-600 text-white shadow-soft' 
+        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600'
     }`}
   >
     <span className="text-lg">{icon}</span>
@@ -206,10 +198,10 @@ const MobileNavButton = ({ active, onClick, icon, label, badge }: {
 
 // Collapsed Catalog Component
 const CollapsedCatalog = ({ onExpand }: { onExpand: () => void }) => (
-  <div className="bg-slate-800/60 backdrop-blur-sm rounded-xl border border-slate-700/50 flex-1 flex flex-col shadow-xl">
+  <div className="bc-card flex-1 flex flex-col shadow-soft">
     <button
       onClick={onExpand}
-      className="flex-1 flex flex-col items-center justify-center gap-3 p-4 text-slate-400 hover:text-white hover:bg-slate-700/30 transition-all rounded-xl group"
+      className="flex-1 flex flex-col items-center justify-center gap-3 p-4 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700/30 transition-all rounded-xl group"
       title="Expand catalog"
     >
       <div className="text-2xl group-hover:scale-110 transition-transform">📚</div>
@@ -223,11 +215,11 @@ const CollapsedCatalog = ({ onExpand }: { onExpand: () => void }) => (
 
 // Empty State Component
 const EmptyState = () => (
-  <div className="flex items-center justify-center h-full text-center text-slate-400 p-8">
+  <div className="flex items-center justify-center h-full text-center text-gray-500 dark:text-gray-400 p-8">
     <div className="max-w-sm">
-      <div className="text-6xl mb-4 opacity-50">🎯</div>
-      <h3 className="font-semibold text-xl text-slate-300 mb-2">Ready to build something?</h3>
-      <p className="text-sm text-slate-400 mb-6">
+      <div className="text-6xl mb-4 opacity-70">🎯</div>
+      <h3 className="font-semibold text-xl text-gray-900 dark:text-gray-100 mb-2">Ready to build something?</h3>
+      <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
         Add items from the catalog to see material requirements, inventory tracking, and step-by-step build instructions.
       </p>
       <div className="flex items-center justify-center gap-4 text-xs text-slate-500">
@@ -263,10 +255,10 @@ const TabButton = ({ title, activeTab, setActiveTab, tabName, icon, badge, disab
     disabled={disabled}
     className={`flex-1 p-4 text-center font-medium text-sm transition-all focus:outline-none relative flex items-center justify-center gap-2 ${
       disabled
-        ? 'text-slate-500 cursor-not-allowed'
+        ? 'text-gray-400 cursor-not-allowed'
         : activeTab === tabName 
-          ? 'text-white bg-slate-700/50 border-b-2 border-blue-500' 
-          : 'text-slate-300 hover:bg-slate-700/30 hover:text-white'
+          ? 'text-gray-900 bg-white border-b-2 border-blue-500 dark:text-white dark:bg-slate-700/50' 
+          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-slate-700/30 dark:hover:text-white'
     }`}
   >
     {icon && <span className="text-base">{icon}</span>}

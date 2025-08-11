@@ -10,9 +10,11 @@ export const SaveStatusIndicator: React.FC<SaveStatusIndicatorProps> = ({ saveSt
 
   if (isLoading) {
     return (
-      <div className="fixed top-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg z-40 flex items-center">
-        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-        <span className="text-sm">Loading your data...</span>
+      <div className="fixed top-4 right-4 z-40">
+        <div className="bc-card px-4 py-2 shadow-soft flex items-center">
+          <div className="w-4 h-4 border-2 border-brand-600 border-t-transparent rounded-full animate-spin mr-2"></div>
+          <span className="text-sm">Loading your data...</span>
+        </div>
       </div>
     );
   }
@@ -22,37 +24,46 @@ export const SaveStatusIndicator: React.FC<SaveStatusIndicatorProps> = ({ saveSt
     const isDatabaseSetupError = error.includes('enable Firestore');
     
     return (
-      <div className={`fixed top-4 right-4 px-4 py-2 rounded-lg shadow-lg z-40 max-w-sm ${
-        isDbNotAvailable || isDatabaseSetupError ? 'bg-yellow-500' : 'bg-red-500'
-      } text-white`}>
-        <div className="text-sm font-semibold">
-          {isDbNotAvailable ? '⚠️ Database Offline' : isDatabaseSetupError ? '⚠️ Database Setup Required' : '❌ Error'}
-        </div>
-        <div className="text-xs mt-1">
-          {isDatabaseSetupError ? 'Enable Firestore in Firebase Console' : error}
-        </div>
-        {(isDbNotAvailable || isDatabaseSetupError) && (
-          <div className="text-xs mt-1 opacity-90">
-            App works normally, data saved locally
+      <div className="fixed top-4 right-4 z-40 max-w-sm">
+        <div className={`bc-card px-4 py-3 shadow-soft ${
+          isDbNotAvailable || isDatabaseSetupError ? 'border-yellow-300' : 'border-red-300'
+        }`}>
+          <div className="text-sm font-semibold flex items-center gap-2">
+            <span>{isDbNotAvailable ? '⚠️' : '❌'}</span>
+            <span>
+              {isDbNotAvailable ? 'Database Offline' : isDatabaseSetupError ? 'Database Setup Required' : 'Error'}
+            </span>
           </div>
-        )}
+          <div className="text-xs mt-1">
+            {isDatabaseSetupError ? 'Enable Firestore in Firebase Console' : error}
+          </div>
+          {(isDbNotAvailable || isDatabaseSetupError) && (
+            <div className="text-xs mt-1 opacity-80">
+              App works normally, data saved locally
+            </div>
+          )}
+        </div>
       </div>
     );
   }
 
   if (isSaving) {
     return (
-      <div className="fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-40 flex items-center">
-        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-        <span className="text-sm">Saving...</span>
+      <div className="fixed top-4 right-4 z-40">
+        <div className="bc-card px-4 py-2 shadow-soft flex items-center">
+          <div className="w-4 h-4 border-2 border-brand-600 border-t-transparent rounded-full animate-spin mr-2"></div>
+          <span className="text-sm">Saving...</span>
+        </div>
       </div>
     );
   }
 
   if (lastSaved) {
     return (
-      <div className="fixed top-4 right-4 bg-green-600 text-white px-3 py-1 rounded-md shadow-md z-40 text-xs">
-        ✅ Saved {lastSaved.toLocaleTimeString()}
+      <div className="fixed top-4 right-4 z-40">
+        <div className="bc-card px-3 py-1 shadow-soft text-xs">
+          ✅ Saved {lastSaved.toLocaleTimeString()}
+        </div>
       </div>
     );
   }

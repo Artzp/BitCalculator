@@ -173,16 +173,16 @@ export const SettlementInventoryV2: React.FC<SettlementInventoryV2Props> = ({ on
 
   if (loading) {
     return (
-      <div className="bg-white rounded-xl p-6 shadow-lg border border-slate-200">
-        <div className="text-center text-gray-500">Loading inventory...</div>
+      <div className="bc-card p-6 shadow-soft">
+        <div className="text-center text-gray-500 dark:text-gray-300">Loading inventory...</div>
       </div>
     );
   }
 
   if (!currentSettlement) {
     return (
-      <div className="bg-white rounded-xl p-6 shadow-lg border border-slate-200">
-        <div className="text-center text-gray-500">No settlement found</div>
+      <div className="bc-card p-6 shadow-soft">
+        <div className="text-center text-gray-500 dark:text-gray-300">No settlement found</div>
       </div>
     );
   }
@@ -203,14 +203,14 @@ export const SettlementInventoryV2: React.FC<SettlementInventoryV2Props> = ({ on
       )}
       
       {/* Settlement Info */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h3 className="font-semibold text-blue-800 mb-1">🏘️ {currentSettlement.name}</h3>
-        <p className="text-sm text-blue-600">{inventory.length} items in inventory</p>
+      <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800/50 rounded-lg p-4">
+        <h3 className="font-semibold text-blue-800 dark:text-blue-200 mb-1">🏘️ {currentSettlement.name}</h3>
+        <p className="text-sm text-blue-600 dark:text-blue-200/90">{inventory.length} items in inventory</p>
       </div>
 
       {/* Add Item Section */}
-      <div className="bg-white rounded-xl p-6 shadow-lg border border-slate-200">
-        <h3 className="text-lg font-bold text-slate-800 mb-4">Add to Inventory</h3>
+      <div className="bc-card p-6 shadow-soft">
+        <h3 className="text-lg font-bold mb-4">Add to Inventory</h3>
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium mb-1">Search Items</label>
@@ -218,7 +218,7 @@ export const SettlementInventoryV2: React.FC<SettlementInventoryV2Props> = ({ on
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-900"
               placeholder="Search for items..."
             />
           </div>
@@ -228,7 +228,7 @@ export const SettlementInventoryV2: React.FC<SettlementInventoryV2Props> = ({ on
             <select
               value={selectedItemId}
               onChange={(e) => setSelectedItemId(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-900"
             >
               <option value="">Choose an item...</option>
               {filteredItems.slice(0, 50).map(([itemId, item]) => (
@@ -247,7 +247,7 @@ export const SettlementInventoryV2: React.FC<SettlementInventoryV2Props> = ({ on
                 value={quantity}
                 onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
                 min="1"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-900"
               />
             </div>
             
@@ -257,7 +257,7 @@ export const SettlementInventoryV2: React.FC<SettlementInventoryV2Props> = ({ on
                 type="text"
                 value={storageLocation}
                 onChange={(e) => setStorageLocation(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-900"
                 placeholder="e.g., Chest #1, Warehouse A"
               />
             </div>
@@ -274,34 +274,34 @@ export const SettlementInventoryV2: React.FC<SettlementInventoryV2Props> = ({ on
       </div>
 
       {/* Current Inventory */}
-      <div className="bg-white rounded-xl p-6 shadow-lg border border-slate-200">
-        <h3 className="text-lg font-bold text-slate-800 mb-4">Current Inventory</h3>
+      <div className="bc-card p-6 shadow-soft">
+        <h3 className="text-lg font-bold mb-4">Current Inventory</h3>
         
         {inventory.length === 0 ? (
           <div className="text-center py-8">
-            <div className="text-gray-400 text-4xl mb-4">📦</div>
-            <p className="text-slate-500 text-lg">No items in inventory</p>
-            <p className="text-slate-400 text-sm mt-2">Add items to track settlement resources</p>
+            <div className="text-gray-400 dark:text-gray-300 text-4xl mb-4">📦</div>
+            <p className="text-slate-500 dark:text-gray-300 text-lg">No items in inventory</p>
+            <p className="text-slate-400 dark:text-gray-400 text-sm mt-2">Add items to track settlement resources</p>
           </div>
         ) : (
           <div className="space-y-3">
             {inventory.map((inventoryItem) => (
-              <div key={inventoryItem.itemId} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div key={inventoryItem.itemId} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/40 rounded-lg border border-gray-200 dark:border-gray-700">
                 <div className="flex-1">
-                  <h4 className="font-semibold text-slate-800">{inventoryItem.itemName}</h4>
-                  <div className="text-sm text-slate-600">
+                  <h4 className="font-semibold">{inventoryItem.itemName}</h4>
+                  <div className="text-sm text-slate-600 dark:text-gray-300">
                     <p>
                       Total: {inventoryItem.quantity}
                       {inventoryItem.reservedQuantity && inventoryItem.reservedQuantity > 0 && (
-                        <span className="text-orange-600"> • Reserved: {inventoryItem.reservedQuantity}</span>
+                        <span className="text-orange-600 dark:text-orange-300"> • Reserved: {inventoryItem.reservedQuantity}</span>
                       )}
                     </p>
-                    <p className="font-medium text-green-600">
+                    <p className="font-medium text-green-600 dark:text-green-300">
                       Available: {inventoryItem.quantity - (inventoryItem.reservedQuantity || 0)}
                     </p>
                   </div>
                   {inventoryItem.storageLocation && (
-                    <p className="text-xs text-slate-500">📍 {inventoryItem.storageLocation}</p>
+                    <p className="text-xs text-slate-500 dark:text-gray-400">📍 {inventoryItem.storageLocation}</p>
                   )}
                 </div>
                 
@@ -311,12 +311,12 @@ export const SettlementInventoryV2: React.FC<SettlementInventoryV2Props> = ({ on
                     value={inventoryItem.quantity}
                     onChange={(e) => canEditInventory && handleUpdateQuantity(inventoryItem.itemId, parseInt(e.target.value) || 0)}
                     min="0"
-                    className={`w-20 px-2 py-1 border rounded text-sm ${canEditInventory ? 'border-gray-300' : 'border-gray-200 bg-gray-100 cursor-not-allowed'}`}
+                    className={`w-20 px-2 py-1 border rounded text-sm ${canEditInventory ? 'border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900' : 'border-gray-200 dark:border-gray-800 bg-gray-100 dark:bg-gray-800 cursor-not-allowed'}`}
                     disabled={!canEditInventory}
                   />
                   <button
                     onClick={() => handleRemoveItem(inventoryItem.itemId)}
-                    className={`px-2 py-1 text-sm ${canEditInventory ? 'text-red-600 hover:text-red-800' : 'text-gray-300 cursor-not-allowed'}`}
+                    className={`px-2 py-1 text-sm ${canEditInventory ? 'text-red-600 dark:text-red-300 hover:text-red-800 dark:hover:text-red-200' : 'text-gray-300 dark:text-gray-600 cursor-not-allowed'}`}
                     disabled={!canEditInventory}
                   >
                     Remove
@@ -330,9 +330,9 @@ export const SettlementInventoryV2: React.FC<SettlementInventoryV2Props> = ({ on
 
       {/* Info Section */}
       {inventory.length > 0 && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <h4 className="font-semibold text-green-800 mb-2">💡 Inventory Management</h4>
-          <div className="text-sm text-green-700 space-y-2">
+        <div className="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800/50 rounded-lg p-4">
+          <h4 className="font-semibold text-green-800 dark:text-green-200 mb-2">💡 Inventory Management</h4>
+          <div className="text-sm text-green-700 dark:text-green-200 space-y-2">
             <p>
               Your settlement inventory is stored in the V2 database and shared with all settlement members.
               Changes are saved automatically and will be visible to all collaborators.

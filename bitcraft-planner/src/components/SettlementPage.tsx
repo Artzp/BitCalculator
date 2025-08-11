@@ -848,7 +848,7 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white p-4 rounded-xl mb-4 shadow-lg">
+      <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white p-4 rounded-xl mb-4 shadow-soft">
         <div className="flex items-start justify-between">
           <div>
             <h1 className="text-2xl font-bold mb-1 flex items-center gap-2">
@@ -878,7 +878,7 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
       </div>
 
       {/* Tab Navigation */}
-      <div className="bg-white rounded-xl shadow-lg border border-slate-200 mb-4">
+      <div className="bc-card mb-4">
         <div className="flex overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
           {tabs.map((tab) => (
             <button
@@ -886,7 +886,7 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
               onClick={() => setActiveView(tab)}
               className={`flex-shrink-0 flex items-center gap-2 px-4 py-3 font-medium text-sm transition-all duration-200 border-b-2 ${
                 activeView === tab
-                  ? 'border-purple-500 text-purple-600 bg-purple-50'
+                  ? 'border-brand-500 text-brand-700 bg-brand-50'
                   : 'border-transparent text-slate-600 hover:text-slate-800 hover:bg-slate-50'
               }`}
             >
@@ -910,20 +910,20 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
       <div className="flex-1 min-h-0 overflow-auto">
         {activeView === 'overview' && (
           <div className="space-y-6">
-            <div className="bg-white rounded-xl p-6 shadow-lg border border-slate-200">
+            <div className="bc-card p-6 shadow-soft">
               <h2 className="text-xl font-bold mb-4">📊 Overview</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-lg">
-                  <div className="text-2xl font-bold text-blue-600">{settlements.length}</div>
-                  <div className="text-blue-800">Settlements</div>
+                <div className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800/40">
+                  <div className="text-2xl font-bold text-blue-600 dark:text-blue-300">{settlements.length}</div>
+                  <div className="text-blue-800 dark:text-blue-200">Settlements</div>
                 </div>
-                <div className="bg-gradient-to-r from-green-50 to-green-100 p-4 rounded-lg">
-                  <div className="text-2xl font-bold text-green-600">{projects.length}</div>
-                  <div className="text-green-800">Projects</div>
+                <div className="bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 p-4 rounded-lg border border-green-200 dark:border-green-800/40">
+                  <div className="text-2xl font-bold text-green-600 dark:text-green-300">{projects.length}</div>
+                  <div className="text-green-800 dark:text-green-200">Projects</div>
                 </div>
-                <div className="bg-gradient-to-r from-purple-50 to-purple-100 p-4 rounded-lg">
-                  <div className="text-2xl font-bold text-purple-600">{tasks.length}</div>
-                  <div className="text-purple-800">Tasks</div>
+                <div className="bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800/40">
+                  <div className="text-2xl font-bold text-purple-600 dark:text-purple-300">{tasks.length}</div>
+                  <div className="text-purple-800 dark:text-purple-200">Tasks</div>
                 </div>
               </div>
               
@@ -970,9 +970,9 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
                   </button>
                 </div>
               ) : (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <h3 className="font-semibold text-green-800 mb-2">✅ Ready to Go!</h3>
-                  <p className="text-green-700 text-sm mb-3">
+                <div className="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800/50 rounded-lg p-4">
+                  <h3 className="font-semibold text-green-800 dark:text-green-300 mb-2">✅ Ready to Go!</h3>
+                  <p className="text-green-700 dark:text-green-200 text-sm mb-3">
                     Current settlement: <strong>{currentSettlement.name}</strong>
                   </p>
                   <div className="flex gap-2">
@@ -997,7 +997,7 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
 
         {activeView === 'settlements' && (
           <div className="space-y-6">
-            <div className="bg-white rounded-xl p-6 shadow-lg border border-slate-200">
+            <div className="bc-card p-6 shadow-soft">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-bold">🏘️ Settlements</h2>
                 <div className="flex gap-2">
@@ -1022,7 +1022,7 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
                     Welcome to the Settlement System! Get started by creating your own settlement or joining an existing one.
                   </div>
                   <div className="grid md:grid-cols-2 gap-4 max-w-2xl mx-auto">
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                    <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800/50 rounded-lg p-6">
                       <h3 className="font-semibold text-blue-800 mb-3">🏗️ Create Settlement</h3>
                       <p className="text-blue-700 text-sm mb-4">
                         Start your own settlement to manage projects, inventory, and collaborate with others.
@@ -1034,7 +1034,7 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
                         Create New Settlement
                       </button>
                     </div>
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+                    <div className="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800/50 rounded-lg p-6">
                       <h3 className="font-semibold text-green-800 mb-3">🤝 Join Settlement</h3>
                       <p className="text-green-700 text-sm mb-4">
                         Join an existing settlement using an invite code to collaborate on projects.
@@ -1051,7 +1051,7 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
               ) : (
                 <div className="space-y-4">
                   {settlements.map((settlement) => (
-                    <div key={settlement.id} className="border border-gray-200 rounded-lg p-4">
+                    <div key={settlement.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                       <div className="flex justify-between items-start">
                         <div>
                           <h3 className="text-lg font-semibold">{settlement.name}</h3>
@@ -1088,7 +1088,7 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
 
         {activeView === 'projects' && (
           <div className="space-y-6">
-            <div className="bg-white rounded-xl p-6 shadow-lg border border-slate-200">
+            <div className="bc-card p-6 shadow-soft">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-bold">🏗️ Projects</h2>
                 <button 
@@ -1105,7 +1105,7 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
                   <div className="text-gray-500 mb-4">
                     Please select a settlement first to view projects.
                   </div>
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mx-auto max-w-md">
+                  <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800/50 rounded-lg p-4 mx-auto max-w-md">
                     <h4 className="font-semibold text-yellow-800 mb-2">📋 Quick Start Guide</h4>
                     <ol className="text-yellow-700 text-sm space-y-1 text-left">
                       <li>1. Go to "Settlements" tab</li>
@@ -1121,7 +1121,7 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
                   <div className="text-gray-500 mb-4">
                     No projects found for "{currentSettlement.name}". Create your first project to get started!
                   </div>
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mx-auto max-w-md">
+                  <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800/50 rounded-lg p-4 mx-auto max-w-md">
                     <h4 className="font-semibold text-blue-800 mb-2">🎯 How to Add Items</h4>
                     <ol className="text-blue-700 text-sm space-y-1 text-left">
                       <li>1. Click "Create Project" above</li>
@@ -1134,7 +1134,7 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                  <div className="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800/50 rounded-lg p-3">
                     <p className="text-green-700 text-sm">
                       💡 <strong>Tip:</strong> Use the "+ Add Item" button in any project to add items with automatic task generation!
                     </p>
@@ -1153,7 +1153,7 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
 
         {activeView === 'tasks' && (
           <div className="space-y-6">
-            <div className="bg-white rounded-xl p-6 shadow-lg border border-slate-200">
+            <div className="bc-card p-6 shadow-soft">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-bold">📋 Tasks</h2>
                 <div className="text-sm text-gray-600">
@@ -1163,7 +1163,7 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
               </div>
               
               {/* Filter Controls */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 p-4 bg-gray-50 dark:bg-gray-900/40 rounded-lg border border-gray-200 dark:border-gray-700">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
                   <input
@@ -1241,7 +1241,7 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
                     );
                     
                     return (
-                      <div key={task.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                      <div key={task.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow hover:bg-gray-50 dark:hover:bg-gray-800/60">
                         <div className="flex justify-between items-start">
                           <div className="flex-1">
                             <h3 className="text-lg font-semibold mb-1">{task.title}</h3>
@@ -1291,7 +1291,7 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
                             
                             {/* User Assignment Interface */}
                             {canAssignTasks() && (
-                              <div className="mt-3 p-3 bg-gray-50 rounded-lg border">
+                              <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-900/40 rounded-lg border border-gray-200 dark:border-gray-700">
                                 <div className="flex justify-between items-center mb-2">
                                   <h4 className="text-sm font-medium text-gray-700">
                                     Assign to Users ({settlementMembers.length} available)
@@ -1366,13 +1366,13 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
                                     </div>
                                     
                                     {/* User List */}
-                                    <div className="max-h-60 overflow-y-auto border border-gray-200 rounded">
+                                    <div className="max-h-60 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded">
                                       {getFilteredUsersForAssignment(task.id).length === 0 ? (
                                         <div className="p-4 text-center text-gray-500">
                                           No users match the current filters
                                         </div>
                                       ) : (
-                                        <div className="divide-y divide-gray-200">
+                                        <div className="divide-y divide-gray-200 dark:divide-gray-700">
                                           {getFilteredUsersForAssignment(task.id).map((member) => {
                                             const userId = member.collaboration?.userId || member.user?.id || '';
                                             const isSelected = (selectedAssignees[task.id] || []).includes(userId);
@@ -1382,7 +1382,7 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
                                             return (
                                               <label 
                                                 key={userId}
-                                                className={`flex items-center p-3 cursor-pointer hover:bg-gray-100 ${
+                                                className={`flex items-center p-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800/60 ${
                                                   isSelected ? 'bg-blue-50' : ''
                                                 } ${isCurrentlyAssigned ? 'bg-purple-50' : ''}`}
                                               >
@@ -1393,10 +1393,10 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
                                                   className="mr-3"
                                                 />
                                                 <div className="flex-1 min-w-0">
-                                                  <div className={`text-sm ${isCurrentlyAssigned ? 'font-semibold text-purple-700' : 'text-gray-900'}`}>
+                                                  <div className={`text-sm ${isCurrentlyAssigned ? 'font-semibold text-purple-700 dark:text-purple-300' : 'text-gray-900 dark:text-gray-100'}`}>
                                                      {getPrivateDisplayName(member, user?.uid)}
                                                     {isCurrentlyAssigned && (
-                                                      <span className="ml-2 text-xs text-purple-600">(currently assigned)</span>
+                                                      <span className="ml-2 text-xs text-purple-600 dark:text-purple-300">(currently assigned)</span>
                                                     )}
                                                   </div>
                                                   <div className="text-xs text-gray-500 capitalize">
@@ -1442,14 +1442,14 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
         {activeView === 'inventory' && (
           <div className="space-y-6">
             {/* Important Notice about Inventory Separation */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800/50 rounded-lg p-4">
               <div className="flex items-start">
                 <div className="flex-shrink-0">
                   <div className="text-blue-400 text-xl">ℹ️</div>
                 </div>
                 <div className="ml-3">
                   <h3 className="text-sm font-medium text-blue-800">Settlement vs Personal Inventory</h3>
-                  <div className="mt-2 text-sm text-blue-700">
+                  <div className="mt-2 text-sm text-blue-700 dark:text-blue-200">
                     <p className="mb-2">
                       <strong>This is your settlement's shared inventory</strong> - separate from your personal inventory used in the BitCalculator.
                     </p>
@@ -1468,7 +1468,7 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
 
         {activeView === 'users' && (
           <div className="space-y-6">
-            <div className="bg-white rounded-xl p-6 shadow-lg border border-slate-200">
+            <div className="bc-card p-6 shadow-soft">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-bold">👥 Settlement Members</h2>
                 <div className="flex gap-2">
@@ -1529,7 +1529,7 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
                     </div>
                   ) : (
                     settlementMembers.map((member) => (
-                      <div key={member.collaboration.userId || member.user.id || member.collaboration.id} className="border border-gray-200 rounded-lg p-4">
+                      <div key={member.collaboration.userId || member.user.id || member.collaboration.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                         <div className="flex justify-between items-start">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-400 to-blue-400 flex items-center justify-center text-white font-semibold">
@@ -1540,17 +1540,17 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
                               <p className="text-sm text-gray-600">{getPrivateEmailDisplay(member, user?.uid)}</p>
                               <div className="flex items-center gap-2 mt-1">
                                 <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                  member.isOwner ? 'bg-purple-100 text-purple-800' :
-                                  member.collaboration.role === 'admin' ? 'bg-red-100 text-red-800' :
-                                  member.collaboration.role === 'contributor' ? 'bg-blue-100 text-blue-800' :
-                                  'bg-gray-100 text-gray-800'
+                                  member.isOwner ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-200' :
+                                  member.collaboration.role === 'admin' ? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200' :
+                                  member.collaboration.role === 'contributor' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200' :
+                                  'bg-gray-100 text-gray-800 dark:bg-gray-800/60 dark:text-gray-200'
                                 }`}>
                                   {member.isOwner ? '👑 Owner' : member.collaboration.role}
                                 </span>
                                 <span className={`px-2 py-1 rounded text-xs ${
-                                  member.collaboration.status === 'active' ? 'bg-green-100 text-green-800' :
-                                  member.collaboration.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                                  'bg-gray-100 text-gray-800'
+                                  member.collaboration.status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200' :
+                                  member.collaboration.status === 'pending' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-200' :
+                                  'bg-gray-100 text-gray-800 dark:bg-gray-800/60 dark:text-gray-200'
                                 }`}>
                                   {member.collaboration.status}
                                 </span>
@@ -1623,7 +1623,7 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
 
         {/* Assignments Tab */}
         {activeView === 'assignments' && (
-          <div className="bg-white rounded-xl p-6 shadow-lg border border-slate-200">
+          <div className="bc-card p-6 shadow-soft">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold">👨‍💼 Task Assignments</h2>
               <div className="flex space-x-3">
@@ -1643,7 +1643,7 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-blue-50 p-4 rounded-lg">
+              <div className="bg-blue-50 dark:bg-blue-900/30 p-4 rounded-lg border border-blue-200 dark:border-blue-800/50">
                 <h3 className="font-semibold text-blue-800 mb-3">🎯 For Admins</h3>
                 <ul className="text-blue-700 text-sm space-y-2">
                   <li>• Assign tasks to multiple settlement members</li>
@@ -1659,7 +1659,7 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
                 </button>
               </div>
               
-              <div className="bg-green-50 p-4 rounded-lg">
+              <div className="bg-green-50 dark:bg-green-900/30 p-4 rounded-lg border border-green-200 dark:border-green-800/50">
                 <h3 className="font-semibold text-green-800 mb-3">📈 Progress Tracking</h3>
                 <ul className="text-green-700 text-sm space-y-2">
                   <li>• View all contributions and submissions</li>
@@ -1676,7 +1676,7 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
               </div>
             </div>
 
-            <div className="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <div className="mt-6 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800/50 rounded-lg p-4">
               <h3 className="font-semibold text-yellow-800 mb-2">💡 How Task Assignments Work</h3>
               <p className="text-yellow-700 text-sm">
                 Admins can assign specific tasks to settlement members. Members receive their assignments 
@@ -1690,7 +1690,7 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
 
         {/* Contributions Tab */}
         {activeView === 'contributions' && (
-          <div className="bg-white rounded-xl p-6 shadow-lg border border-slate-200">
+          <div className="bc-card p-6 shadow-soft">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold">🎯 My Contributions</h2>
               <div className="flex space-x-3">
@@ -1710,7 +1710,7 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-green-50 p-4 rounded-lg">
+              <div className="bg-green-50 dark:bg-green-900/30 p-4 rounded-lg border border-green-200 dark:border-green-800/50">
                 <h3 className="font-semibold text-green-800 mb-3">📤 Submit Your Work</h3>
                 <ul className="text-green-700 text-sm space-y-2">
                   <li>• View your assigned tasks</li>
@@ -1726,7 +1726,7 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
                 </button>
               </div>
               
-              <div className="bg-purple-50 p-4 rounded-lg">
+              <div className="bg-purple-50 dark:bg-purple-900/30 p-4 rounded-lg border border-purple-200 dark:border-purple-800/50">
                 <h3 className="font-semibold text-purple-800 mb-3">📊 View Statistics</h3>
                 <ul className="text-purple-700 text-sm space-y-2">
                   <li>• See contribution leaderboards</li>
@@ -1743,7 +1743,7 @@ const SettlementPage: React.FC<SettlementPageProps> = () => {
               </div>
             </div>
 
-            <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="mt-6 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800/50 rounded-lg p-4">
               <h3 className="font-semibold text-blue-800 mb-2">🚀 Contribution Process</h3>
               <div className="text-blue-700 text-sm space-y-1">
                 <p><strong>1.</strong> Get assigned tasks from settlement admins</p>

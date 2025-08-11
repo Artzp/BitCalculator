@@ -15,7 +15,7 @@ export const Tabs: React.FC<TabsProps> = ({ activeTab, onTabClick }) => {
 
   return (
     <nav className="w-full">
-      <div className="inline-flex items-center justify-center gap-1 p-1 rounded-lg bg-gray-100 dark:bg-gray-800 border border-gray-200/60 dark:border-gray-700/50">
+      <div className="inline-flex items-center justify-center gap-1 p-1 rounded-lg bg-gray-100 dark:bg-gray-800 border border-gray-200/60 dark:border-gray-700/50 shadow-soft">
         <button
           onClick={() => onTabClick('calculator')}
           className={`px-3 py-2 text-sm font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500/40 ${

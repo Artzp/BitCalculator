@@ -26,14 +26,14 @@ const BuildSteps: React.FC = () => {
       {/* Enhanced Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-blue-500/20 rounded-lg">
+          <div className="p-2 bg-blue-100 dark:bg-blue-500/20 rounded-lg">
             <span className="text-xl">🔧</span>
           </div>
           <div>
-            <h3 className="text-xl font-bold text-white">
+            <h3 className="text-xl font-bold">
               Build Steps
             </h3>
-            <p className="text-sm text-slate-400">
+            <p className="text-sm text-gray-600 dark:text-slate-400">
               {smartSteps.length > 0 
                 ? `${smartSteps.length} steps to complete your build`
                 : 'All materials ready!'
@@ -57,11 +57,11 @@ const BuildSteps: React.FC = () => {
       </div>
 
       {smartSteps.length === 0 ? (
-        <div className="text-center py-12">
-          <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-8 max-w-md mx-auto">
+            <div className="text-center py-12">
+          <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/40 rounded-2xl p-8 max-w-md mx-auto">
             <div className="text-5xl mb-4">✅</div>
-            <h4 className="font-bold text-xl text-emerald-300 mb-2">All Set!</h4>
-            <p className="text-emerald-200/80 text-sm">
+            <h4 className="font-bold text-xl text-emerald-700 dark:text-emerald-200 mb-2">All Set!</h4>
+            <p className="text-emerald-700 dark:text-emerald-200/90 text-sm">
               You have everything needed in your inventory to complete your build.
             </p>
           </div>
@@ -71,8 +71,8 @@ const BuildSteps: React.FC = () => {
           {smartSteps.map((step, index) => (
             <div key={`${step.itemId}-${index}`} className={`group relative overflow-hidden rounded-xl border transition-all duration-300 hover:shadow-lg ${
               step.isBaseItem 
-                ? 'bg-gradient-to-r from-emerald-900/20 to-emerald-800/10 border-emerald-500/30 hover:border-emerald-400/50' 
-                : 'bg-gradient-to-r from-amber-900/20 to-amber-800/10 border-amber-500/30 hover:border-amber-400/50'
+                ? 'bg-emerald-50 dark:bg-gray-900/40 border-emerald-200 dark:border-gray-700 hover:border-emerald-300 dark:hover:border-gray-600 border-l-4 border-emerald-300 dark:border-l-4 dark:border-emerald-500' 
+                : 'bg-amber-50 dark:bg-gray-900/40 border-amber-200 dark:border-gray-700 hover:border-amber-300 dark:hover:border-gray-600 border-l-4 border-amber-300 dark:border-l-4 dark:border-amber-500'
             }`}>
               {/* Step Number Badge */}
               <div className={`absolute top-4 left-4 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
@@ -88,22 +88,22 @@ const BuildSteps: React.FC = () => {
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 mb-2">
-                      <h3 className="font-bold text-white text-lg truncate">{step.itemName}</h3>
+                      <h3 className="font-bold text-lg truncate">{step.itemName}</h3>
                       <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
                         step.isBaseItem 
-                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' 
-                          : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/40' 
+                          : 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300 border border-amber-200 dark:border-amber-500/40'
                       }`}>
                         {step.isBaseItem ? '🌿 Gather' : '🔨 Craft'}
                       </span>
                     </div>
-                    <p className="text-slate-400 text-sm">
+                    <p className="text-gray-600 dark:text-slate-400 text-sm">
                       {step.isBaseItem ? 'Collect from the world' : 'Craft at appropriate station'}
                     </p>
                   </div>
                   <div className="flex flex-col items-end gap-1">
-                    <div className="text-slate-400 text-xs">Tier {step.tier}</div>
-                    <div className="text-slate-500 text-xs">
+                    <div className="text-gray-600 dark:text-slate-400 text-xs">Tier {step.tier}</div>
+                    <div className="text-gray-600 dark:text-slate-500 text-xs">
                       {index + 1}/{smartSteps.length}
                     </div>
                   </div>
@@ -112,38 +112,38 @@ const BuildSteps: React.FC = () => {
                 {/* Main Action */}
                 <div className={`p-4 rounded-lg mb-4 ${
                   step.isBaseItem 
-                    ? 'bg-emerald-500/10 border border-emerald-500/20' 
-                    : 'bg-amber-500/10 border border-amber-500/20'
+                    ? 'bg-emerald-50 border border-emerald-200 dark:bg-gray-900/40 dark:border-gray-700' 
+                    : 'bg-amber-50 border border-amber-200 dark:bg-gray-900/40 dark:border-gray-700'
                 }`}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className={`p-2 rounded-lg ${
-                        step.isBaseItem ? 'bg-emerald-500/20' : 'bg-amber-500/20'
+                        step.isBaseItem ? 'bg-emerald-100 dark:bg-emerald-500/20' : 'bg-amber-100 dark:bg-amber-500/20'
                       }`}>
                         <span className="text-lg">{step.isBaseItem ? '🌿' : '⚒️'}</span>
                       </div>
                       <div>
-                        <div className="text-white font-medium">
+                        <div className="font-medium">
                           {step.isBaseItem ? 'Gather' : 'Craft'}
                         </div>
-                        <div className="text-slate-400 text-sm">
+                        <div className="text-gray-600 dark:text-slate-400 text-sm">
                           {step.isBaseItem ? 'from world' : 'at station'}
                         </div>
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-2xl font-bold text-white">
+                      <div className="text-2xl font-bold">
                         {step.needToCraft.toLocaleString()}
                       </div>
-                      <div className="text-slate-400 text-xs">needed</div>
+                      <div className="text-gray-600 dark:text-slate-400 text-xs">needed</div>
                     </div>
                   </div>
                   
                   {step.haveInInventory > 0 && (
-                    <div className="mt-3 pt-3 border-t border-slate-600/30">
+                    <div className="mt-3 pt-3 border-t border-gray-200 dark:border-slate-600/30">
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-slate-400">Already in inventory:</span>
-                        <span className="text-blue-300 font-medium">
+                        <span className="text-gray-600 dark:text-slate-400">Already in inventory:</span>
+                        <span className="text-blue-700 dark:text-blue-300 font-medium">
                           {step.haveInInventory.toLocaleString()}
                         </span>
                       </div>
@@ -153,20 +153,20 @@ const BuildSteps: React.FC = () => {
 
                 {/* Ingredients (for craftable items) */}
                 {!step.isBaseItem && step.ingredients.length > 0 && (
-                  <div className="bg-slate-800/30 rounded-lg p-4">
-                    <h4 className="text-sm font-semibold text-slate-300 mb-3 flex items-center gap-2">
+                  <div className="bg-gray-50 dark:bg-slate-800/30 rounded-lg p-4">
+                    <h4 className="text-sm font-semibold text-gray-700 dark:text-slate-300 mb-3 flex items-center gap-2">
                       <span>🧪</span>
                       Recipe Requirements
                     </h4>
                     <div className="grid gap-2">
                       {step.ingredients.map((ingredient, idx) => (
-                        <div key={idx} className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg">
-                          <span className="text-slate-200 font-medium">{ingredient.itemName}</span>
+                        <div key={idx} className="flex items-center justify-between p-3 bg-gray-100 dark:bg-slate-700/50 rounded-lg">
+                          <span className="text-gray-800 dark:text-slate-200 font-medium">{ingredient.itemName}</span>
                           <div className="text-right">
-                            <div className="text-white font-bold">
+                            <div className="font-bold">
                               {ingredient.quantityPerCraft}x
                             </div>
-                            <div className="text-slate-400 text-xs">
+                            <div className="text-gray-600 dark:text-slate-400 text-xs">
                               total: {ingredient.totalNeeded}
                             </div>
                           </div>
@@ -178,7 +178,7 @@ const BuildSteps: React.FC = () => {
               </div>
 
               {/* Hover Effect Overlay */}
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-gray-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
             </div>
           ))}
         </div>

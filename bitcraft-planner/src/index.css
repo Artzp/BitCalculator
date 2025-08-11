@@ -37,7 +37,7 @@ code {
     @apply container mx-auto max-w-screen-2xl px-4;
   }
   .bc-card {
-    @apply rounded-xl shadow-soft bg-white/90 dark:bg-gray-800/80 backdrop-blur border border-gray-200/60 dark:border-gray-700/50;
+    @apply rounded-xl shadow-soft bg-white/90 dark:bg-gray-800/80 backdrop-blur border border-gray-200/60 dark:border-gray-700/50 text-gray-900 dark:text-gray-100;
   }
   .bc-card-header {
     @apply px-5 py-3 border-b border-gray-200/60 dark:border-gray-700/50 flex items-center justify-between;
