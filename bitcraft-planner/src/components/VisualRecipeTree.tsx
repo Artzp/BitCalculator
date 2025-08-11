@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useCallback } from 'react';
 import { useItemsStore } from '../state/useItemsStore';
 import { buildRecipeTree, RecipeTreeNode } from '../utils/buildRecipeTree';
 
@@ -24,6 +24,56 @@ interface TreeNode extends RecipeTreeNode {
 const VisualRecipeTree: React.FC<VisualRecipeTreeProps> = ({ isOpen, onClose }) => {
   const { buildList, items, inventory } = useItemsStore();
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
+  // Panning state (works per-scroll container via event.currentTarget)
+  const isPanningRef = useRef(false);
+  const panStartXRef = useRef(0);
+  const panStartYRef = useRef(0);
+  const panStartScrollLeftRef = useRef(0);
+  const panStartScrollTopRef = useRef(0);
+  const panTargetRef = useRef<HTMLDivElement | null>(null);
+
+  const handlePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const target = e.currentTarget;
+    isPanningRef.current = true;
+    panTargetRef.current = target;
+    panStartXRef.current = e.clientX;
+    panStartYRef.current = e.clientY;
+    panStartScrollLeftRef.current = target.scrollLeft;
+    panStartScrollTopRef.current = target.scrollTop;
+    try {
+      target.setPointerCapture(e.pointerId);
+    } catch {}
+    // Improve UX cursor
+    target.style.cursor = 'grabbing';
+  }, []);
+
+  const handlePointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isPanningRef.current || !panTargetRef.current) return;
+    const target = panTargetRef.current;
+    const dx = e.clientX - panStartXRef.current;
+    const dy = e.clientY - panStartYRef.current;
+    target.scrollLeft = panStartScrollLeftRef.current - dx;
+    target.scrollTop = panStartScrollTopRef.current - dy;
+  }, []);
+
+  const handlePointerUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (!panTargetRef.current) return;
+    try {
+      panTargetRef.current.releasePointerCapture(e.pointerId);
+    } catch {}
+    panTargetRef.current.style.cursor = '';
+    isPanningRef.current = false;
+    panTargetRef.current = null;
+  }, []);
+
+  // Enable Shift+Wheel for horizontal scrolling on standard mice
+  const handleWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
+    if (!e.shiftKey) return; // only intercept when holding Shift
+    const target = e.currentTarget;
+    if (!target) return;
+    e.preventDefault();
+    target.scrollLeft += e.deltaY;
+  }, []);
 
   // Advanced tree layout algorithm with proper positioning
   const calculateNodePositions = (tree: RecipeTreeNode): TreeNode[] => {
@@ -368,7 +418,14 @@ const VisualRecipeTree: React.FC<VisualRecipeTreeProps> = ({ isOpen, onClose }) 
                       </div>
                     </div>
                     
-                    <div className="relative bg-slate-800/50 backdrop-blur-sm rounded-xl border border-slate-600/50 p-8 overflow-auto">
+                    <div 
+                      className="relative bg-slate-800/50 backdrop-blur-sm rounded-xl border border-slate-600/50 p-8 overflow-auto cursor-grab select-none"
+                      onPointerDown={handlePointerDown}
+                      onPointerMove={handlePointerMove}
+                      onPointerUp={handlePointerUp}
+                      onPointerCancel={handlePointerUp}
+                      onWheel={handleWheel}
+                    >
                       <div 
                         className="relative mx-auto"
                         style={{

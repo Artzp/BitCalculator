@@ -84,8 +84,8 @@ function App() {
   const [useModernUI, setUseModernUI] = useState<boolean>(() => {
     try {
       const saved = localStorage.getItem('bc_ui_modern');
-      return saved ? JSON.parse(saved) : false; // default Classic
-    } catch { return false; }
+      return saved ? JSON.parse(saved) : true; // default Modern
+    } catch { return true; }
   });
 
   useEffect(() => {

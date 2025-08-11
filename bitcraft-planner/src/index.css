@@ -4,12 +4,12 @@
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto',
+    'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    Arial, 'Noto Sans', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  line-height: 1.6;
+  line-height: 1.65;
   font-size: 16px;
 }
 
@@ -37,7 +37,7 @@ code {
     @apply container mx-auto max-w-screen-2xl px-4;
   }
   .bc-card {
-    @apply rounded-xl shadow-soft bg-white dark:bg-gray-800 border border-gray-200/60 dark:border-gray-700/50;
+    @apply rounded-xl shadow-soft bg-white/90 dark:bg-gray-800/80 backdrop-blur border border-gray-200/60 dark:border-gray-700/50;
   }
   .bc-card-header {
     @apply px-5 py-3 border-b border-gray-200/60 dark:border-gray-700/50 flex items-center justify-between;
@@ -46,7 +46,7 @@ code {
     @apply p-5;
   }
   .bc-btn {
-    @apply inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed;
+    @apply inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed active:scale-[0.98];
   }
   .bc-btn-primary {
     @apply bc-btn bg-brand-600 text-white hover:bg-brand-700 focus:ring-brand-500 dark:focus:ring-offset-gray-900;
@@ -55,7 +55,7 @@ code {
     @apply bc-btn bg-gray-100 text-gray-900 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600 focus:ring-gray-400 dark:focus:ring-offset-gray-900;
   }
   .bc-toolbar {
-    @apply sticky top-0 z-30 backdrop-blur supports-[backdrop-filter]:bg-white/70 dark:supports-[backdrop-filter]:bg-gray-900/60 bg-white dark:bg-gray-900 border-b border-gray-200/60 dark:border-gray-800;
+    @apply sticky top-0 z-30 backdrop-blur supports-[backdrop-filter]:bg-white/70 dark:supports-[backdrop-filter]:bg-gray-900/60 bg-white/90 dark:bg-gray-900/80 border-b border-gray-200/60 dark:border-gray-800;
   }
 }
 

@@ -18,6 +18,20 @@ module.exports = {
       },
     },
     extend: {
+      fontFamily: {
+        sans: [
+          'Inter',
+          'ui-sans-serif',
+          'system-ui',
+          '-apple-system',
+          'Segoe UI',
+          'Roboto',
+          'Helvetica Neue',
+          'Arial',
+          'Noto Sans',
+          'sans-serif',
+        ],
+      },
       borderRadius: {
         xl: '1rem',
         '2xl': '1.25rem',

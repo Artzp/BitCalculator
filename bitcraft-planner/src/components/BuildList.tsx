@@ -201,8 +201,8 @@ const BuildQueueItem = ({ buildItem, item, rarityColor, rarityName, onUpdateQuan
         </div>
       </div>
 
-      {/* Hover/Focus Effect */}
-      <div className="absolute inset-0 ring-1 ring-transparent group-hover:ring-white/10 group-focus-within:ring-brand-500/40 rounded-lg"></div>
+      {/* Hover/Focus Effect (decorative overlay must not block clicks) */}
+      <div className="pointer-events-none absolute inset-0 ring-1 ring-transparent group-hover:ring-white/10 group-focus-within:ring-brand-500/40 rounded-lg"></div>
     </div>
   );
 };
