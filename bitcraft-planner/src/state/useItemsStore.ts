@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { Item, ItemsData } from '../types/Item';
 import { getEffectiveInventoryQuantity } from '../utils/inventoryLogic';
+import { getEffectiveOutputPerCraft } from '../utils/recipeMath';
 
 export interface Inventory {
   [itemId: string]: number;
@@ -267,8 +268,8 @@ export const useItemsStore = create<ItemsStore>((set, get) => ({
       const recipe = item.recipes[recipeIndex] || item.recipes[0];
       if (!recipe) return;
       
-      // Calculate how many crafting operations we need
-      const craftingOperations = Math.ceil(quantity / recipe.output_quantity);
+      // Calculate how many crafting operations we need (consider effective output per craft)
+      const craftingOperations = Math.ceil(quantity / getEffectiveOutputPerCraft(recipe));
       
       // Process each ingredient recursively
       recipe.consumed_items.forEach(ingredient => {
@@ -336,7 +337,7 @@ export const useItemsStore = create<ItemsStore>((set, get) => ({
       if (!recipe) return;
       
       // Calculate how many crafting operations we actually need (not total needed)
-      const craftingOperations = Math.ceil(stillNeed / recipe.output_quantity);
+      const craftingOperations = Math.ceil(stillNeed / getEffectiveOutputPerCraft(recipe));
       
       // Process each ingredient recursively - only for what we need to craft
       recipe.consumed_items.forEach(ingredient => {
@@ -448,7 +449,7 @@ export const useItemsStore = create<ItemsStore>((set, get) => ({
       if (!recipe) return;
       
       // Calculate how many crafting operations we need for the missing quantity
-      const craftingOperations = Math.ceil(stillNeed / recipe.output_quantity);
+      const craftingOperations = Math.ceil(stillNeed / getEffectiveOutputPerCraft(recipe));
       
       // Store ingredient info for this crafting step
       const stepInfo = craftingSteps.get(itemId)!;

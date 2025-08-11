@@ -23,6 +23,7 @@ export interface Item {
   tier: number;
   rarity: number;
   icon: string;
+  description?: string;
   recipes: Recipe[];
   extraction_skill: number;
 }

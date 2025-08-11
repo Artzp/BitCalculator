@@ -49,7 +49,7 @@ const BuildList: React.FC = () => {
           const item = items[buildItem.itemId];
           if (!item) return null;
 
-          const rarityColor = RARITY_COLORS[item.rarity as keyof typeof RARITY_COLORS] || '#64748b';
+          const rarityClass = RARITY_COLORS[item.rarity as keyof typeof RARITY_COLORS] || 'text-gray-400';
           const rarityName = RARITY_NAMES[item.rarity as keyof typeof RARITY_NAMES] || 'Unknown';
 
           return (
@@ -57,7 +57,7 @@ const BuildList: React.FC = () => {
               key={`${buildItem.itemId}-${index}`}
               buildItem={buildItem}
               item={item}
-              rarityColor={rarityColor}
+              rarityClass={rarityClass}
               rarityName={rarityName}
               onUpdateQuantity={(quantity) => updateBuildListItem(buildItem.itemId, quantity)}
               onRemove={() => removeFromBuildList(buildItem.itemId)}
@@ -103,10 +103,10 @@ const BuildList: React.FC = () => {
 };
 
 // Enhanced Build Queue Item Component
-const BuildQueueItem = ({ buildItem, item, rarityColor, rarityName, onUpdateQuantity, onRemove }: {
+const BuildQueueItem = ({ buildItem, item, rarityClass, rarityName, onUpdateQuantity, onRemove }: {
   buildItem: any;
   item: any;
-  rarityColor: string;
+  rarityClass: string;
   rarityName: string;
   onUpdateQuantity: (quantity: number) => void;
   onRemove: () => void;
@@ -127,8 +127,15 @@ const BuildQueueItem = ({ buildItem, item, rarityColor, rarityName, onUpdateQuan
   };
 
   const getRarityIcon = (rarity: number) => {
-    const icons = ['⚪', '🟢', '🔵', '🟣', '🟡'];
-    return icons[rarity] || '⚪';
+    const iconByRarity: Record<number, string> = {
+      1: '⚪',
+      2: '🟢',
+      3: '🔵',
+      4: '🟣',
+      5: '🟡',
+      6: '🟠',
+    };
+    return iconByRarity[rarity] ?? '⚪';
   };
 
   return (
@@ -152,7 +159,7 @@ const BuildQueueItem = ({ buildItem, item, rarityColor, rarityName, onUpdateQuan
               </div>
               <div className="flex items-center gap-1">
                 <span>{getRarityIcon(item.rarity)}</span>
-                <span style={{ color: rarityColor }}>{rarityName}</span>
+                <span className={rarityClass}>{rarityName}</span>
               </div>
             </div>
           </div>

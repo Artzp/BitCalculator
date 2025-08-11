@@ -1,4 +1,5 @@
 import { Item, Ingredient, ItemsData } from '../types/Item';
+import { getEffectiveOutputPerCraft } from './recipeMath';
 
 export interface RecipeTreeNode {
   itemId: string;
@@ -44,8 +45,9 @@ export function buildRecipeTree(
   const recipe = item.recipes[0];
   
   // Build children recursively
+  const effectiveOutput = getEffectiveOutputPerCraft(recipe);
   const children: RecipeTreeNode[] = recipe.consumed_items.map((ingredient: Ingredient) => {
-    const childQuantity = Math.ceil((quantity / recipe.output_quantity) * ingredient.quantity);
+    const childQuantity = Math.ceil((quantity / effectiveOutput) * ingredient.quantity);
     return buildRecipeTree(ingredient.id.toString(), childQuantity, items, newVisited);
   });
   

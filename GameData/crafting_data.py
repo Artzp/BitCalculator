@@ -1,6 +1,6 @@
 import copy
 import json
-import os.path
+import os
 
 root = 'BitCraft_GameData/server/region'
 crafting_recipes = json.load(open(f'{root}/crafting_recipe_desc.json'))
@@ -13,6 +13,24 @@ skills = json.load(open(f'{root}/skill_desc.json'))
 
 cargo_offset = 0xffffffff
 crafting_data = {}
+
+
+def sanitize_icon_asset_name(icon_asset_name: str) -> str:
+    """Convert game icon asset name to a stable slug.
+
+    Examples:
+    - "GeneratedIcons/Items/Stick" -> "Items/Stick"
+    - "GeneratedIcons/Other/Animals/DeerMale" -> "Other/Animals/DeerMale"
+    - "Items/HexCoin[,3,10,500]" -> "Items/HexCoin"
+    """
+    if not isinstance(icon_asset_name, str):
+        return ''
+    # Trim any parameter list suffix like ",[...]"
+    base = icon_asset_name.split('[', 1)[0]
+    # Drop the leading GeneratedIcons/ if present
+    if base.startswith('GeneratedIcons/'):
+        base = base[len('GeneratedIcons/'):]
+    return base.strip('/')
 
 # Building type mapping
 building_type_to_name = {
@@ -152,7 +170,10 @@ for item in items:
 		'name': item['name'],
 		'tier': item['tier'],
 		'rarity': item['rarity'][0],
-		'icon': item['icon_asset_name'].replace('GeneratedIcons/', ''),
+		# Keep a stable slug the UI can map to an image later
+		'icon': sanitize_icon_asset_name(item.get('icon_asset_name', '')),
+		# Add the item description for richer UI
+		'description': item.get('description', ''),
 		'recipes': find_recipes(id),
 		'extraction_skill': find_extraction_skill(id)
 	}
@@ -168,24 +189,14 @@ for item in cargos:
 		'name': item['name'],
 		'tier': item['tier'],
 		'rarity': item['rarity'][0],
-		'icon': item['icon_asset_name'].replace('GeneratedIcons/', ''),
+		'icon': sanitize_icon_asset_name(item.get('icon_asset_name', '')),
+		'description': item.get('description', ''),
 		'recipes': find_recipes(id, True),
 		'extraction_skill': find_extraction_skill(id, True)
 	}
 
-print('Checking icons...')
-missing_icons = []
-for item in crafting_data.values():
-	icon = item['icon']
-	if not os.path.exists(f'../BitPlanner/Assets/{icon}.png'):
-		if os.path.exists(f'../BitPlanner/Assets/{icon.replace('Other/', '')}.png'):
-			item['icon'] = icon.replace('Other/', '')
-		else:
-			missing_icons.append(icon)
-if len(missing_icons) > 0:
-	print('Missing icons:')
-	for icon in sorted(set(missing_icons)):
-		print('  ' + icon)
+# Icon files are not shipped with this repo. We generate stable icon slugs and
+# let the frontend map them to hosted assets or placeholders.
 
 print('Reorganizing recipes...')
 for item in items:
@@ -238,4 +249,16 @@ for item in crafting_data.values():
 	recipes.sort(key=lambda recipe: recipe['consumed_items'][0]['quantity'] if len(recipe['consumed_items']) > 0 else 0)
 	item['recipes'] = recipes
 
+# Primary output used by data scripts
 json.dump(crafting_data, open('../BitPlanner/crafting_data.json', 'w'), indent=2)
+
+# Also write directly to the app's public data folder for zero-copy updates
+try:
+    public_data_dir = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', 'bitcraft-planner', 'public', 'data'))
+    os.makedirs(public_data_dir, exist_ok=True)
+    public_recipes_path = os.path.join(public_data_dir, 'recipes.json')
+    with open(public_recipes_path, 'w') as f:
+        json.dump(crafting_data, f, indent=2)
+    print(f'Wrote public recipes to: {public_recipes_path}')
+except Exception as e:
+    print(f'Warning: could not write public recipes.json: {e}')

@@ -103,7 +103,9 @@ const ItemList: React.FC<ItemListProps> = ({ showAddToBuilds = false }) => {
             className="px-2 py-1 bg-slate-700/50 border border-slate-600/50 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500/50"
           >
             <option value="all">All Tiers</option>
-            {[...Array(8).keys()].map(i => <option key={i+1} value={i+1}>T{i+1}</option>)}
+            {uniqueTiers.map(tier => (
+              <option key={tier} value={tier}>T{tier}</option>
+            ))}
           </select>
 
           <select
@@ -190,12 +192,19 @@ const EnhancedItemRow = ({ id, item, addQuantities, updateQuantity, handleAddToB
 }) => {
   const canCraft = item.recipes && item.recipes.length > 0;
   const quantity = addQuantities[id] || 1;
-  const rarityColor = RARITY_COLORS[item.rarity as keyof typeof RARITY_COLORS] || '#64748b';
+  const rarityClass = RARITY_COLORS[item.rarity as keyof typeof RARITY_COLORS] || 'text-gray-400';
   const rarityName = RARITY_NAMES[item.rarity as keyof typeof RARITY_NAMES] || 'Unknown';
 
   const getRarityIcon = (rarity: number) => {
-    const icons = ['⚪', '🟢', '🔵', '🟣', '🟡'];
-    return icons[rarity] || '⚪';
+    const iconByRarity: Record<number, string> = {
+      1: '⚪',
+      2: '🟢',
+      3: '🔵',
+      4: '🟣',
+      5: '🟡',
+      6: '🟠',
+    };
+    return iconByRarity[rarity] ?? '⚪';
   };
 
   const getTierIcon = (tier: number) => {
@@ -235,7 +244,7 @@ const EnhancedItemRow = ({ id, item, addQuantities, updateQuantity, handleAddToB
               </div>
               <div className="flex items-center gap-1">
                 <span>{getRarityIcon(item.rarity)}</span>
-                <span style={{ color: rarityColor }}>{rarityName}</span>
+                <span className={rarityClass}>{rarityName}</span>
               </div>
               {item.recipes?.[0]?.building_requirement && (
                 <div className="flex items-center gap-1 text-slate-500">

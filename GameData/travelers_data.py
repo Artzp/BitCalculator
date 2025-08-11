@@ -1,4 +1,5 @@
 import json
+import os
 
 root = 'BitCraft_GameData/server/region'
 npcs = json.load(open(f'{root}/npc_desc.json'))
@@ -69,3 +70,14 @@ for traveler in travelers_data:
     traveler['tasks'].sort(key=lambda task: task['levels'][0])
 
 json.dump(travelers_data, open('../BitPlanner/travelers_data.json', 'w'), indent=2)
+
+# Also write directly to the app's public data folder for zero-copy updates
+try:
+    public_data_dir = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', 'bitcraft-planner', 'public', 'data'))
+    os.makedirs(public_data_dir, exist_ok=True)
+    public_travelers_path = os.path.join(public_data_dir, 'travelers.json')
+    with open(public_travelers_path, 'w') as f:
+        json.dump(travelers_data, f, indent=2)
+    print(f'Wrote public travelers to: {public_travelers_path}')
+except Exception as e:
+    print(f'Warning: could not write public travelers.json: {e}')

@@ -6,6 +6,7 @@ export const RARITY_COLORS = {
   3: 'text-blue-400',
   4: 'text-purple-400',
   5: 'text-yellow-400',
+  6: 'text-orange-400',
 } as const;
 
 export const RARITY_NAMES = {
@@ -14,6 +15,7 @@ export const RARITY_NAMES = {
   3: 'Rare',
   4: 'Epic',
   5: 'Legendary',
+  6: 'Mythic',
 } as const;
 
 // Re-export building types for convenience
