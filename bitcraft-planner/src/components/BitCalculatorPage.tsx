@@ -17,7 +17,7 @@ const BitCalculatorPage: React.FC = () => {
   const hasItems = buildList.length > 0;
 
   return (
-    <div className="flex-grow flex flex-col h-[calc(100vh-120px)] relative overflow-hidden">
+    <div className="flex-grow flex flex-col h-[calc(100svh-120px)] relative overflow-hidden">
       {/* Mobile Navigation */}
       <div className="md:hidden bg-white/90 dark:bg-gray-900/80 backdrop-blur-sm border-b border-gray-200/60 dark:border-gray-700/50 p-3 flex-shrink-0">
         <div className="flex gap-2">

@@ -3,10 +3,14 @@ import {
   User, 
   onAuthStateChanged, 
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   GoogleAuthProvider,
+  signInWithCredential,
   signOut,
   AuthError
 } from 'firebase/auth';
+import { Capacitor } from '@capacitor/core';
 import { auth } from '../firebase/config';
 
 interface AuthState {
@@ -28,6 +32,17 @@ export const useAuth = () => {
   const googleProvider = new GoogleAuthProvider();
 
   useEffect(() => {
+    // Complete any pending redirect on native platforms
+    (async () => {
+      try {
+        if (Capacitor.getPlatform() !== 'web') {
+          await getRedirectResult(auth);
+        }
+      } catch (_e) {
+        // ignore; onAuthStateChanged will still reflect auth state
+      }
+    })();
+
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setAuthState({
         user,
@@ -50,8 +65,23 @@ export const useAuth = () => {
   const signInWithGoogle = async () => {
     setAuthState(prev => ({ ...prev, loading: true, error: null }));
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-      return result;
+      if (Capacitor.getPlatform() !== 'web') {
+        // Prefer native plugin on Android/iOS to avoid localhost callback issues
+        const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication');
+        const { credential: nativeCredential } = await FirebaseAuthentication.signInWithGoogle();
+        if (nativeCredential?.idToken) {
+          const cred = GoogleAuthProvider.credential(nativeCredential.idToken);
+          const result = await signInWithCredential(auth, cred);
+          setAuthState(prev => ({ ...prev, loading: false }));
+          return result;
+        }
+        // Fallback to redirect if native credential missing
+        await signInWithRedirect(auth, googleProvider);
+        return null;
+      } else {
+        const result = await signInWithPopup(auth, googleProvider);
+        return result;
+      }
     } catch (error) {
       const authError = error as AuthError;
       setAuthState(prev => ({ 
@@ -71,6 +101,12 @@ export const useAuth = () => {
       isIntentionalLogout = true;
       
       await signOut(auth);
+      if (Capacitor.getPlatform() !== 'web') {
+        try {
+          const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication');
+          await FirebaseAuthentication.signOut();
+        } catch (_e) {}
+      }
     } catch (error) {
       // Reset flag if logout fails
       isIntentionalLogout = false;
